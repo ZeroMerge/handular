@@ -1,0 +1,242 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// -------------------------------------------------------------
+// 1. Staff & Admin Profiles
+// -------------------------------------------------------------
+model StaffProfile {
+  id             String       @id @default(uuid())
+  supabaseUserId String       @unique
+  email          String       @unique
+  fullName       String
+  role           StaffRole    @default(STAFF)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  reviewTasks    ReviewTask[]
+}
+
+enum StaffRole {
+  ADMIN
+  STAFF
+}
+
+// -------------------------------------------------------------
+// 2. Verified Sellers
+// -------------------------------------------------------------
+model Seller {
+  id                 String              @id @default(uuid())
+  businessName       String
+  contactName        String
+  whatsappNumber     String              @unique
+  telegramHandle     String?
+  verificationStatus SellerStatus        @default(VERIFIED)
+  categories         ProductCategory[]
+  rating             Float               @default(5.0)
+  completedDeals     Int                 @default(0)
+  notes              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  broadcasts         RequestBroadcast[]
+  inboundBatches     InboundBatch[]
+  offers             Offer[]
+}
+
+enum SellerStatus {
+  PENDING
+  VERIFIED
+  SUSPENDED
+}
+
+enum ProductCategory {
+  LAPTOPS
+  PHONES
+  ACCESSORIES
+}
+
+// -------------------------------------------------------------
+// 3. Buyer / Student Requests
+// -------------------------------------------------------------
+model BuyerRequest {
+  id              String             @id @default(uuid())
+  publicToken     String             @unique
+  buyerName       String
+  buyerPhone      String
+  buyerEmail      String?
+  category        ProductCategory
+  targetSpecs     Json               // Preferred brand, min RAM, use-case, etc.
+  minBudget       Decimal?           @db.Decimal(12, 2)
+  maxBudget       Decimal            @db.Decimal(12, 2)
+  currency        String             @default("NGN")
+  status          RequestStatus      @default(OPEN)
+  expiresAt       DateTime
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  broadcasts      RequestBroadcast[]
+  offers          Offer[]
+}
+
+enum RequestStatus {
+  OPEN
+  BROADCASTED
+  OFFERS_READY
+  OFFER_SELECTED
+  CLOSED_WON
+  CLOSED_LOST
+  EXPIRED
+}
+
+// -------------------------------------------------------------
+// 4. Request Broadcast / Distribution Audit
+// -------------------------------------------------------------
+model RequestBroadcast {
+  id          String          @id @default(uuid())
+  requestId   String
+  sellerId    String
+  channel     ChannelType
+  status      BroadcastStatus @default(QUEUED)
+  sentAt      DateTime?
+  deliveredAt DateTime?
+  repliedAt   DateTime?
+  createdAt   DateTime        @default(now())
+
+  request     BuyerRequest    @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  seller      Seller          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, sellerId])
+}
+
+enum ChannelType {
+  WHATSAPP
+  TELEGRAM
+  WEB
+}
+
+enum BroadcastStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  REPLIED
+}
+
+// -------------------------------------------------------------
+// 5. Inbound Message Batches (45s Debouncer & State Machine)
+// -------------------------------------------------------------
+model InboundBatch {
+  id              String         @id @default(uuid())
+  sellerId        String
+  channel         ChannelType
+  rawMessages     String[]
+  rawAudioUrls    String[]
+  rawPhotoUrls    String[]
+  cloudinaryUrls  String[]
+  audioTranscript String?
+  extractedJson   Json?
+  status          BatchStatus    @default(COLLECTING)
+  silenceExpires  DateTime
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  seller          Seller         @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  offers          Offer[]
+}
+
+enum BatchStatus {
+  COLLECTING          // Debouncing window active
+  CLOSED_READY        // 45s silence elapsed, ready for pipeline
+  AUDIO_TRANSCRIBING  // Cloudflare Whisper running
+  VISION_PROCESSING   // Gemini Flash running
+  JSON_STRUCTURING    // Groq running
+  COMPLETED
+  FAILED
+}
+
+// -------------------------------------------------------------
+// 6. Structured Product Offers
+// -------------------------------------------------------------
+model Offer {
+  id                 String         @id @default(uuid())
+  requestId          String
+  sellerId           String
+  inboundBatchId     String?
+  brand              String
+  model              String
+  specs              Json           // { cpu, ram, storage, batteryHealth, screen, warranty }
+  price              Decimal        @db.Decimal(12, 2)
+  isNegotiable       Boolean        @default(false)
+  conditionGrade     String         // "Grade A - Pristine", "Grade B", etc.
+  cloudinaryPhotos   String[]
+  aiConfidenceScore  Float          // 0.0 to 1.0
+  reviewStatus       ReviewStatus   @default(PENDING_REVIEW)
+  isPublishedToBuyer Boolean        @default(false)
+  isBuyerSelected    Boolean        @default(false)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  request            BuyerRequest   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  seller             Seller         @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  batch              InboundBatch?  @relation(fields: [inboundBatchId], references: [id])
+  reviewTask         ReviewTask?
+  dealOutcome        DealOutcome?
+}
+
+enum ReviewStatus {
+  AUTO_APPROVED
+  PENDING_REVIEW
+  STAFF_APPROVED
+  REJECTED
+}
+
+// -------------------------------------------------------------
+// 7. Human Review Queue
+// -------------------------------------------------------------
+model ReviewTask {
+  id              String        @id @default(uuid())
+  offerId         String        @unique
+  assignedStaffId String?
+  status          TaskStatus    @default(PENDING)
+  flagReason      String        // e.g. "Low confidence RAM (0.64)", "Missing explicit price"
+  resolvedAt      DateTime?
+  createdAt       DateTime      @default(now())
+
+  offer           Offer         @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  staff           StaffProfile? @relation(fields: [assignedStaffId], references: [id])
+}
+
+enum TaskStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
+
+// -------------------------------------------------------------
+// 8. Deal Outcomes & Commissions
+// -------------------------------------------------------------
+model DealOutcome {
+  id               String       @id @default(uuid())
+  offerId          String       @unique
+  finalAgreedPrice Decimal      @db.Decimal(12, 2)
+  commissionAmount Decimal      @db.Decimal(12, 2)
+  status           DealStatus   @default(IN_PROGRESS)
+  studentFeedback  String?
+  sellerRating     Int?
+  notes            String?
+  closedAt         DateTime?
+  createdAt        DateTime     @default(now())
+
+  offer            Offer        @relation(fields: [offerId], references: [id], onDelete: Cascade)
+}
+
+enum DealStatus {
+  IN_PROGRESS
+  SUCCESSFUL
+  CANCELLED
+  DISPUTED
+}

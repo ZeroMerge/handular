@@ -1,0 +1,14 @@
+{
+  "name": "handular",
+  "private": true,
+  "scripts": {
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:push": "pnpm --dir api run prisma db push",
+    "db:migrate": "pnpm --dir api run prisma:migrate",
+    "db:studio": "pnpm --dir api run prisma:studio",
+    "dev:api": "pnpm --dir api run dev",
+    "dev:client": "pnpm --dir client run dev",
+    "dev:admin": "pnpm --dir admin run dev"
+  }
+}

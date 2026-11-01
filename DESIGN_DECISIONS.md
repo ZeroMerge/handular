@@ -23,7 +23,7 @@ This document tracks all confirmed architectural decisions, stack selections, co
 | :--- | :--- | :--- | :--- |
 | **Frontend Hosting** | **Vercel** | Free Tier (Hobby) | Edge CDN, instant global loading, zero cold starts, automatic GitHub deployments. |
 | **Backend API** | **Render** | Free Tier Web Service (Node.js) | 512MB RAM, free SSL, native Git push deploys. |
-| **Database** | **Supabase** | Free Tier (Managed PostgreSQL) | 500MB database, connection pooling, zero maintenance, instant GUI dashboard. |
+| **Database** | **Supabase (Prod) / Docker (Local)** | Free Tier (Managed PostgreSQL) / postgres:16-alpine | 500MB database, connection pooling, zero maintenance, instant GUI dashboard. |
 | **Media & Images** | **Cloudinary** | Free Tier (25 Credits / mo) | Auto-compression, on-the-fly resizing/thumbnails for laptop & phone pictures, direct uploads. |
 | **Auth** | **Supabase Auth** | Free Tier (50,000 MAUs) | Built into Supabase DB, secure JWT generation, ready-made React auth hooks. |
 | **AI - Audio** | **Cloudflare Workers AI** | Free Tier (10k Neurons/day) | Edge GPU Whisper transcription for seller voice notes. |

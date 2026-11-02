@@ -2,6 +2,10 @@ import fastify from 'fastify';
 import cors from '@fastify/cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+import { requestRoutes } from './modules/requests/requests.routes';
+import { adminRoutes } from './modules/admin/admin.routes';
+import { webhookRoutes } from './modules/webhooks/webhooks.routes';
+import { debouncerService } from './modules/debouncer/debouncer.service';
 
 dotenv.config();
 
@@ -13,7 +17,7 @@ const server = fastify({
 });
 
 async function main() {
-  // Configure CORS for Client and Admin Vercel apps
+  // Configure CORS for Client and Admin Vercel / local dev apps
   const allowedOrigins = [
     process.env.CLIENT_URL || 'http://localhost:5173',
     process.env.ADMIN_URL || 'http://localhost:5174',
@@ -48,41 +52,26 @@ async function main() {
       database: 'PostgreSQL (Docker local)',
       docs: '/api/v1',
       health: '/health',
+      modules: ['requests', 'admin', 'webhooks', 'debouncer', 'ai'],
     };
   });
 
-  // API v1: Live Database Queries
-  server.get('/api/v1/requests', async () => {
-    const requests = await prisma.buyerRequest.findMany({
-      include: {
-        offers: {
-          include: {
-            seller: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    return { data: requests, count: requests.length };
-  });
+  // Register feature route modules
+  await server.register(requestRoutes);
+  await server.register(adminRoutes);
+  await server.register(webhookRoutes);
 
-  server.get('/api/v1/sellers', async () => {
-    const sellers = await prisma.seller.findMany({
-      orderBy: { rating: 'desc' },
-    });
-    return { data: sellers, count: sellers.length };
-  });
-
-  server.get('/api/v1/offers', async () => {
-    const offers = await prisma.offer.findMany({
-      include: {
-        seller: true,
-        request: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    return { data: offers, count: offers.length };
-  });
+  // Setup periodic background debouncer sweeper (runs every 15s)
+  setInterval(async () => {
+    try {
+      const processed = await debouncerService.sweepExpiredBatches();
+      if (processed.length > 0) {
+        server.log.info(`Swept and processed ${processed.length} expired inbound batches.`);
+      }
+    } catch (e: any) {
+      server.log.error({ err: e }, 'Debouncer sweep error');
+    }
+  }, 15000);
 
   const port = Number(process.env.PORT) || 3001;
   const host = process.env.HOST || '0.0.0.0';

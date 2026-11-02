@@ -6,6 +6,7 @@ import { requestRoutes } from './modules/requests/requests.routes';
 import { adminRoutes } from './modules/admin/admin.routes';
 import { webhookRoutes } from './modules/webhooks/webhooks.routes';
 import { debouncerService } from './modules/debouncer/debouncer.service';
+import { authPlugin } from './plugins/auth';
 
 dotenv.config();
 
@@ -59,6 +60,9 @@ async function main() {
       modules: ['requests', 'admin', 'webhooks', 'debouncer', 'ai'],
     };
   });
+
+  // Register plugins
+  await server.register(authPlugin);
 
   // Register feature route modules
   await server.register(requestRoutes);

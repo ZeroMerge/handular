@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { PrismaClient, ReviewStatus } from '@prisma/client';
 import { z } from 'zod';
+import { broadcastService } from '../broadcast/broadcast.service';
 
 const prisma = new PrismaClient();
 
@@ -239,5 +240,80 @@ export async function adminRoutes(fastify: FastifyInstance) {
       message: 'Verified seller registered successfully',
       data: seller,
     });
+  });
+
+  // 7. Get All Sellers (Admin Directory)
+  fastify.get('/api/v1/admin/sellers', async () => {
+    const sellers = await prisma.seller.findMany({
+      orderBy: { rating: 'desc' },
+    });
+    return { data: sellers, count: sellers.length };
+  });
+
+  // 8. Update Seller Status / Categories / Notes
+  fastify.patch('/api/v1/admin/sellers/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as any;
+    try {
+      const seller = await prisma.seller.update({
+        where: { id },
+        data: {
+          verificationStatus: body.verificationStatus,
+          categories: body.categories,
+          notes: body.notes,
+        },
+      });
+      return reply.send({ message: 'Seller updated successfully', data: seller });
+    } catch (err: any) {
+      return reply.status(400).send({ error: err.message });
+    }
+  });
+
+  // 9. Manual Re-broadcast to Sellers
+  fastify.post('/api/v1/admin/requests/:id/broadcast', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    try {
+      const result = await broadcastService.broadcastRequest(id);
+      return reply.send({
+        message: `Broadcasted to ${result.broadcastedCount} campus sellers`,
+        data: result,
+      });
+    } catch (err: any) {
+      return reply.status(400).send({ error: err.message });
+    }
+  });
+
+  // 10. Deep Review Payload for Single Offer
+  fastify.get('/api/v1/admin/reviews/:offerId', async (request, reply) => {
+    const { offerId } = request.params as { offerId: string };
+    const offer = await prisma.offer.findUnique({
+      where: { id: offerId },
+      include: {
+        seller: true,
+        request: true,
+        batch: true,
+        reviewTask: true,
+      },
+    });
+    if (!offer) {
+      return reply.status(404).send({ error: 'Offer not found' });
+    }
+    return { data: offer };
+  });
+
+  // 11. Deal Outcomes & Commission Ledger
+  fastify.get('/api/v1/admin/deals', async () => {
+    const deals = await prisma.dealOutcome.findMany({
+      include: {
+        offer: {
+          include: {
+            request: true,
+            seller: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return { data: deals, count: deals.length };
   });
 }

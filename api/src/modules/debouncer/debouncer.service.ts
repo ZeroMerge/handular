@@ -1,5 +1,6 @@
 import { PrismaClient, BatchStatus, ReviewStatus, ChannelType } from '@prisma/client';
 import { aiService } from '../ai/ai.service';
+import { mediaService } from '../media/media.service';
 
 const prisma = new PrismaClient();
 
@@ -170,14 +171,15 @@ export class DebouncerService {
       visionNotes,
     });
 
-    // Cloudinary sample photos if none provided
-    const photos =
+    // Cloudinary AVIF compressed photos (Decision 14)
+    const rawPhotos =
       batch.rawPhotoUrls.length > 0
         ? batch.rawPhotoUrls
         : [
             'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1000&q=80',
             'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=1000&q=80',
           ];
+    const photos = rawPhotos.map((p) => mediaService.formatAvifUrl(p));
 
     // Auto-approve if confidence >= 0.85, else flag for staff review
     const isHighConfidence = structured.confidenceScore >= 0.85 && structured.flagReasons.length === 0;

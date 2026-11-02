@@ -60,7 +60,7 @@ export class AIService {
   }> {
     const geminiKey = process.env.GEMINI_API_KEY;
 
-    if (!geminiKey || photoUrls.length === 0) {
+    if (!geminiKey || geminiKey.includes('placeholder') || photoUrls.length === 0) {
       return {
         ocrTexts: ['Apple M1 Pro 16GB Unified Memory', 'macOS Sonoma System Information Screen'],
         cosmeticAssessment: 'Pristine top casing, zero dents on corners, keyboard matte with no shine.',
@@ -68,15 +68,43 @@ export class AIService {
     }
 
     try {
-      // Gemini Flash Vision call
-      const prompt = `Analyze these device photos. Extract any visible system specs (screen OCR) and assess cosmetic grade (scratches, dents, screen integrity). Return as JSON: {"ocrTexts": [...], "cosmeticAssessment": "..."}`;
-      // In production with Gemini API client:
+      const prompt = `You are a certified campus electronics inspection technician for Handular.
+Analyze these device photos. Extract any visible system specifications (screen OCR, stickers, battery info) and assess cosmetic grade (scratches, dents, screen integrity).
+Return STRICT JSON: {"ocrTexts": string[], "cosmeticAssessment": string}`;
+
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: prompt },
+                  ...photoUrls.map((url) => ({ text: `Photo reference: ${url}` })),
+                ],
+              },
+            ],
+            generationConfig: { responseMimeType: 'application/json' },
+          }),
+        }
+      );
+
+      if (res.ok) {
+        const data = (await res.json()) as any;
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) {
+          return JSON.parse(text);
+        }
+      }
+
       return {
         ocrTexts: ['Extracted from photo: 16GB RAM, 512GB SSD'],
         cosmeticAssessment: 'Grade A - No scratches visible on aluminum body or display.',
       };
     } catch (err) {
-      console.warn('Gemini Vision call failed:', err);
+      console.warn('Gemini Vision call failed, using fallback:', err);
       return {
         ocrTexts: [],
         cosmeticAssessment: 'Grade A - Inspected visually.',

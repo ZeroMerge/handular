@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { PrismaClient, ProductCategory, RequestStatus } from '@prisma/client';
 import { z } from 'zod';
+import { broadcastService } from '../broadcast/broadcast.service';
 
 const prisma = new PrismaClient();
 
@@ -74,27 +75,8 @@ export async function requestRoutes(fastify: FastifyInstance) {
       },
     });
 
-    // Match verified sellers tagged with this category and simulate broadcast distribution
-    const matchingSellers = await prisma.seller.findMany({
-      where: {
-        verificationStatus: 'VERIFIED',
-        categories: { has: category as ProductCategory },
-      },
-    });
-
-    // Create RequestBroadcast distribution audit rows
-    if (matchingSellers.length > 0) {
-      await prisma.requestBroadcast.createMany({
-        data: matchingSellers.map((s) => ({
-          requestId: newRequest.id,
-          sellerId: s.id,
-          channel: 'WHATSAPP',
-          status: 'SENT',
-          sentAt: new Date(),
-        })),
-        skipDuplicates: true,
-      });
-    }
+    // Match verified sellers tagged with this category and broadcast distribution
+    const broadcastResult = await broadcastService.broadcastRequest(newRequest.id);
 
     return reply.status(201).send({
       message: 'Request broadcasted successfully to verified campus sellers',
@@ -102,7 +84,7 @@ export async function requestRoutes(fastify: FastifyInstance) {
         id: newRequest.id,
         publicToken: newRequest.publicToken,
         status: newRequest.status,
-        sellersBroadcasted: matchingSellers.length,
+        sellersBroadcasted: broadcastResult.broadcastedCount,
         expiresAt: newRequest.expiresAt,
         offersUrl: `/offers/${newRequest.publicToken}`,
       },

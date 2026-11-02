@@ -1,9 +1,11 @@
 import fastify from 'fastify';
 import cors from '@fastify/cors';
 import dotenv from 'dotenv';
+import { PrismaClient } from '@prisma/client';
 
 dotenv.config();
 
+const prisma = new PrismaClient();
 const server = fastify({
   logger: {
     level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
@@ -19,7 +21,6 @@ async function main() {
 
   await server.register(cors, {
     origin: (origin, cb) => {
-      // Allow requests with no origin (like mobile apps, curl, server-to-server)
       if (!origin) return cb(null, true);
       if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
         return cb(null, true);
@@ -29,7 +30,7 @@ async function main() {
     credentials: true,
   });
 
-  // Keep-alive health check endpoint (cron-job.org pings this every 10m)
+  // Keep-alive health check endpoint
   server.get('/health', async () => {
     return {
       status: 'ok',
@@ -44,12 +45,46 @@ async function main() {
     return {
       name: 'Handular Core API',
       version: '0.1.0',
+      database: 'PostgreSQL (Docker local)',
       docs: '/api/v1',
       health: '/health',
     };
   });
 
-  const port = Number(process.env.PORT) || 3000;
+  // API v1: Live Database Queries
+  server.get('/api/v1/requests', async () => {
+    const requests = await prisma.buyerRequest.findMany({
+      include: {
+        offers: {
+          include: {
+            seller: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return { data: requests, count: requests.length };
+  });
+
+  server.get('/api/v1/sellers', async () => {
+    const sellers = await prisma.seller.findMany({
+      orderBy: { rating: 'desc' },
+    });
+    return { data: sellers, count: sellers.length };
+  });
+
+  server.get('/api/v1/offers', async () => {
+    const offers = await prisma.offer.findMany({
+      include: {
+        seller: true,
+        request: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return { data: offers, count: offers.length };
+  });
+
+  const port = Number(process.env.PORT) || 3001;
   const host = process.env.HOST || '0.0.0.0';
 
   try {

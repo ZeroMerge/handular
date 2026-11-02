@@ -6,7 +6,7 @@ import { DealConfirmed } from './components/DealConfirmed';
 import { LiveTracker } from './components/LiveTracker';
 
 // By default in local dev, points to our running Fastify backend
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4001';
 
 type ViewMode = 'wizard' | 'offers' | 'confirmed' | 'tracker';
 

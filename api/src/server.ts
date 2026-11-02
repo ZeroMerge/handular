@@ -19,8 +19,12 @@ const server = fastify({
 async function main() {
   // Configure CORS for Client and Admin Vercel / local dev apps
   const allowedOrigins = [
-    process.env.CLIENT_URL || 'http://localhost:5173',
-    process.env.ADMIN_URL || 'http://localhost:5174',
+    process.env.CLIENT_URL || 'http://localhost:5180',
+    process.env.ADMIN_URL || 'http://localhost:5181',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5180',
+    'http://localhost:5181',
   ];
 
   await server.register(cors, {
@@ -73,7 +77,7 @@ async function main() {
     }
   }, 15000);
 
-  const port = Number(process.env.PORT) || 3001;
+  const port = Number(process.env.PORT) || 4001;
   const host = process.env.HOST || '0.0.0.0';
 
   try {

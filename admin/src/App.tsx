@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { DashboardMetrics, AdminRequestItem, ReviewItem, SellerRecord } from './types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4001';
 
 type NavTab = 'dashboard' | 'reviews' | 'requests' | 'sellers' | 'deals';
 
@@ -293,7 +293,7 @@ export function App() {
         <div className="p-4 border-t border-neutral-200/80 text-[11px] text-neutral-500 space-y-1">
           <div className="flex items-center gap-1.5 font-medium text-neutral-800">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Fastify API Live (:3001)</span>
+            <span>Fastify API Live (:4001)</span>
           </div>
           <div className="text-neutral-400 font-mono">Postgres (Docker)</div>
         </div>
@@ -462,7 +462,7 @@ export function App() {
 
                       <div className="flex items-center gap-2">
                         <a
-                          href={`http://localhost:5173/?token=${req.publicToken}&view=offers`}
+                          href={`http://localhost:5180/?token=${req.publicToken}&view=offers`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="h-8 px-2.5 rounded-lg border border-neutral-200/80 text-xs text-neutral-600 hover:bg-neutral-100 flex items-center gap-1 transition-colors"
@@ -628,7 +628,7 @@ export function App() {
                         </td>
                         <td className="p-4">
                           <a
-                            href={`http://localhost:5173/?token=${r.publicToken}&view=offers`}
+                            href={`http://localhost:5180/?token=${r.publicToken}&view=offers`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 text-[#0051c3] hover:underline font-medium"

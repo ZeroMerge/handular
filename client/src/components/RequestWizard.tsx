@@ -415,7 +415,12 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
       {/* Conversation Thread - Pure Clean Chat Flow (NO Banners, NO Start Over) */}
       <div
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto space-y-3.5 pr-1 pb-4 scroll-smooth no-scrollbar"
+        data-chat-thread
+        className="flex-1 overflow-y-auto space-y-3.5 pb-4 scroll-smooth no-scrollbar"
+        style={{
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+        }}
       >
         {messages.map((msg) => {
           const isUser = msg.sender === 'user';

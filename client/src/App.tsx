@@ -270,7 +270,7 @@ export function App() {
         onDeleteChat={handleDeleteChat}
       />
 
-      <main className="flex-1 pb-24 md:pb-16">
+      <main className={`flex-1 ${view === 'wizard' ? 'overflow-hidden' : 'pb-24 md:pb-16'}`}>
         {view === 'wizard' && (
           <RequestWizard
             apiBaseUrl={API_BASE_URL}

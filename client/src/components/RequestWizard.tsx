@@ -54,7 +54,8 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
   const [isBotTyping, setIsBotTyping] = useState(false);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const isInitialLoadRef = useRef(true);
 
   const getFormatTime = () => {
     const now = new Date();
@@ -69,13 +70,36 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
     return `${timeGreeting}, ${name}! It's a good time to find a great device today.`;
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
+  // Scroll management: Keep top greeting visible initially; scroll to bottom only as chat grows or on history load
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isBotTyping, currentStep]);
+    const el = chatContainerRef.current;
+    if (!el) return;
+
+    // Reset window scroll to 0,0 so body never scrolls
+    window.scrollTo(0, 0);
+
+    // If chat is fresh and short (<= 2 messages, e.g. initial greeting + prompt), keep top message 100% visible
+    const isShortChat = !activeChatId && messages.length <= 2;
+    const hasOverflow = el.scrollHeight > el.clientHeight + 10;
+
+    if (isShortChat || !hasOverflow) {
+      el.scrollTop = 0;
+      return;
+    }
+
+    // When chat length has grown or when an existing chat with history is loaded/refreshed, scroll container to bottom
+    const timer = setTimeout(() => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTo({
+          top: chatContainerRef.current.scrollHeight,
+          behavior: isInitialLoadRef.current ? 'auto' : 'smooth',
+        });
+        isInitialLoadRef.current = false;
+      }
+    }, 60);
+
+    return () => clearTimeout(timer);
+  }, [messages, isBotTyping, currentStep, activeChatId]);
 
   // Load active chat or initialize alive sequence
   useEffect(() => {
@@ -405,9 +429,12 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-6 flex flex-col h-[calc(100vh-5rem)]">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-col h-[calc(100dvh-4rem)]">
       {/* Conversation Thread - Pure Clean Chat Flow (NO Banners, NO Start Over) */}
-      <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 pb-4 scroll-smooth no-scrollbar">
+      <div
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto space-y-3.5 pr-1 pb-4 scroll-smooth no-scrollbar"
+      >
         {messages.map((msg) => {
           const isUser = msg.sender === 'user';
           return (
@@ -575,8 +602,6 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
             )}
           </div>
         )}
-
-        <div ref={messagesEndRef} />
       </div>
 
       {/* ADAPTIVE BOTTOM DOCK: Only displays the controls needed for the active step */}

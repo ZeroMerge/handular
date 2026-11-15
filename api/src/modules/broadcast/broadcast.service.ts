@@ -101,7 +101,7 @@ ${specs.notes ? `Buyer Notes: "${specs.notes}"\n` : ''}
     };
   }
 
-  private async sendWhatsAppMessage(phone: string, text: string): Promise<boolean> {
+  public async sendWhatsAppMessage(phone: string, text: string): Promise<boolean> {
     const evoUrl = process.env.EVOLUTION_API_URL;
     const evoKey = process.env.EVOLUTION_API_KEY;
     const instance = process.env.EVOLUTION_INSTANCE_NAME || 'handular-bot';
@@ -131,7 +131,7 @@ ${specs.notes ? `Buyer Notes: "${specs.notes}"\n` : ''}
     }
   }
 
-  private async sendTelegramMessage(chatIdOrUsername: string, text: string): Promise<boolean> {
+  public async sendTelegramMessage(chatIdOrUsername: string, text: string): Promise<boolean> {
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
     if (!botToken) {

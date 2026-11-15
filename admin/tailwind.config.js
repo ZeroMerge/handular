@@ -3,12 +3,13 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const toPosix = (p) => p.replace(/\\/g, '/');
 
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
-    path.join(__dirname, 'index.html'),
-    path.join(__dirname, 'src/**/*.{js,ts,jsx,tsx}'),
+    toPosix(path.join(__dirname, 'index.html')),
+    toPosix(path.join(__dirname, 'src/**/*.{js,ts,jsx,tsx}')),
     './index.html',
     './src/**/*.{js,ts,jsx,tsx}',
     './admin/index.html',

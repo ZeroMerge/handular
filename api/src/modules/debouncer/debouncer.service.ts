@@ -14,25 +14,41 @@ export class DebouncerService {
   async handleInboundMessage(params: {
     sellerPhone: string;
     channel: ChannelType;
+    telegramHandle?: string;
     text?: string;
     audioUrl?: string;
     photoUrl?: string;
     requestId?: string;
   }) {
-    // 1. Resolve seller by phone
-    let seller = await prisma.seller.findUnique({
-      where: { whatsappNumber: params.sellerPhone },
+    // 1. Resolve seller by telegramHandle or phone
+    let seller = await prisma.seller.findFirst({
+      where: {
+        OR: [
+          { whatsappNumber: params.sellerPhone },
+          ...(params.telegramHandle ? [
+            { telegramHandle: params.telegramHandle },
+            { telegramHandle: `@${params.telegramHandle.replace('@', '')}` }
+          ] : [])
+        ]
+      }
     });
 
     if (!seller) {
-      // Auto-register seller as pending if not found, or use first verified seller
+      // Auto-register seller as verified vendor
       seller = await prisma.seller.create({
         data: {
           businessName: `Campus Vendor (${params.sellerPhone.slice(-4)})`,
           contactName: 'Vendor',
           whatsappNumber: params.sellerPhone,
+          telegramHandle: params.telegramHandle,
           categories: ['LAPTOPS', 'PHONES'],
+          verificationStatus: 'VERIFIED',
         },
+      });
+    } else if (!seller.telegramHandle && params.telegramHandle) {
+      seller = await prisma.seller.update({
+        where: { id: seller.id },
+        data: { telegramHandle: params.telegramHandle },
       });
     }
 
@@ -181,8 +197,12 @@ export class DebouncerService {
           ];
     const photos = rawPhotos.map((p) => mediaService.formatAvifUrl(p));
 
-    // Auto-approve if confidence >= 0.85, else flag for staff review
-    const isHighConfidence = structured.confidenceScore >= 0.85 && structured.flagReasons.length === 0;
+    // Auto-approve if confidence >= 0.85 and no critical flags, else flag for staff review
+    const nonCriticalKeywords = ['screen', 'warranty', 'display', 'charger'];
+    const criticalFlags = structured.flagReasons.filter(
+      (reason) => !nonCriticalKeywords.some((kw) => reason.toLowerCase().includes(kw))
+    );
+    const isHighConfidence = structured.confidenceScore >= 0.85 && criticalFlags.length === 0 && structured.price > 0;
     const reviewStatus = isHighConfidence ? ReviewStatus.AUTO_APPROVED : ReviewStatus.PENDING_REVIEW;
 
     // Create the structured Offer
@@ -237,6 +257,67 @@ export class DebouncerService {
         extractedJson: structured as any,
       },
     });
+
+    // Real-time notification back to the seller via Telegram
+    const sellerRecord = await prisma.seller.findUnique({ where: { id: batch.sellerId } });
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+
+    const notifyText = isHighConfidence
+      ? `🎉 *Offer Approved & Published to Student!*\n\n` +
+        `📦 *Item:* ${structured.brand} ${structured.model}\n` +
+        `💰 *Price:* ₦${Number(structured.price).toLocaleString()}\n` +
+        `🏷️ *Grade:* ${structured.conditionGrade}\n` +
+        `🤖 *AI Confidence:* ${(structured.confidenceScore * 100).toFixed(0)}%\n\n` +
+        `The student has been notified and can accept your offer on their portal.`
+      : `📋 *Offer Queued for Staff Verification*\n\n` +
+        `📦 *Item:* ${structured.brand} ${structured.model}\n` +
+        `💰 *Price:* ₦${Number(structured.price).toLocaleString()}\n` +
+        `🔍 *Note:* ${structured.flagReasons.join(', ') || 'AI confidence threshold requires human confirmation'}\n\n` +
+        `Campus ops team is verifying specs and will publish it shortly!`;
+
+    // 1. Dispatch to Telegram
+    if (sellerRecord?.telegramHandle && botToken) {
+      try {
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: sellerRecord.telegramHandle,
+            text: notifyText,
+            parse_mode: 'Markdown',
+          }),
+        });
+      } catch (e) {
+        console.warn('Failed to notify seller on Telegram:', e);
+      }
+    }
+
+    // 2. Dispatch to WhatsApp via Evolution API
+    if (sellerRecord?.whatsappNumber && !sellerRecord.whatsappNumber.startsWith('tg_')) {
+      const evoUrl = process.env.EVOLUTION_API_URL;
+      const evoKey = process.env.EVOLUTION_API_KEY;
+      const instance = process.env.EVOLUTION_INSTANCE_NAME || 'handular-bot';
+
+      if (evoUrl && evoKey) {
+        try {
+          const cleanPhone = sellerRecord.whatsappNumber.replace(/[^0-9]/g, '');
+          await fetch(`${evoUrl}/message/sendText/${instance}`, {
+            method: 'POST',
+            headers: {
+              apikey: evoKey,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              number: cleanPhone,
+              text: notifyText,
+            }),
+          });
+          console.log(`[Debouncer] Dispatched approval confirmation to WhatsApp: ${cleanPhone}`);
+        } catch (e) {
+          console.warn('Failed to notify seller on WhatsApp:', e);
+        }
+      }
+    }
 
     return {
       success: true,

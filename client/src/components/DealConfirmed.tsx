@@ -1,5 +1,12 @@
 import React from 'react';
-import { ShieldCheck, MapPin, Clock, Phone, CheckCircle, ArrowLeft } from 'lucide-react';
+import {
+  ShieldCheckIcon,
+  MapPinIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  ChatBubbleOvalLeftEllipsisIcon,
+} from './ui/icons';
+import { Button } from './ui/button';
 
 interface DealConfirmedProps {
   token: string;
@@ -8,36 +15,34 @@ interface DealConfirmedProps {
 
 export const DealConfirmed: React.FC<DealConfirmedProps> = ({ token, onGoHome }) => {
   return (
-    <div className="max-w-2xl mx-auto px-4 py-10 sm:py-16">
+    <div className="max-w-2xl mx-auto px-4 py-6 sm:py-10">
       {/* Success Badge */}
-      <div className="text-center mb-8">
-        <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200/80 flex items-center justify-center mx-auto mb-4">
-          <ShieldCheck className="w-8 h-8 stroke-[2px]" />
+      <div className="text-center mb-6">
+        <div className="w-14 h-14 rounded-[12px] bg-[#10393b]/10 text-[#10393b] flex items-center justify-center mx-auto mb-3">
+          <ShieldCheckIcon className="w-8 h-8 text-[#30c5ce]" />
         </div>
-        <span className="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold mb-2 font-mono">
-          DEAL RESERVED • {token}
+        <span className="inline-block px-3 py-0.5 rounded-full bg-[#10393b] text-[#30c5ce] text-xs font-normal mb-1.5 font-mono">
+          RESERVED • {token}
         </span>
-        <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight mb-2">
-          Your Device is Locked & Ready
+        <h1 className="text-3xl sm:text-4xl font-normal text-[#10393b] tracking-tight">
+          Your Device is Reserved!
         </h1>
-        <p className="text-sm text-neutral-500 max-w-md mx-auto">
-          We have notified the campus seller. Your selected price is secured with Handular Buyer Escrow Protection.
-        </p>
       </div>
 
-      {/* Campus Hub Pickup Card */}
-      <div className="bg-white rounded-2xl border border-neutral-200/80 p-6 sm:p-7 space-y-6 mb-6">
-        <div className="flex items-start gap-3 pb-5 border-b border-neutral-100">
-          <MapPin className="w-5 h-5 text-[#0051c3] flex-shrink-0 mt-0.5" />
+      {/* Campus Hub Pickup Card - ZERO BORDERS, ZERO SHADOWS, 18px RADIUS */}
+      <div className="bg-white rounded-[18px] p-5 sm:p-7 space-y-5 mb-5">
+        {/* Hub Location Box */}
+        <div className="flex items-start gap-3 p-3.5 rounded-[12px] bg-[#eceae2]">
+          <MapPinIcon className="w-5 h-5 text-[#10393b] flex-shrink-0 mt-0.5" />
           <div>
-            <h3 className="text-sm font-bold text-neutral-900">
+            <h3 className="text-sm font-normal text-[#10393b]">
               Campus Verification & Pickup Hub
             </h3>
-            <p className="text-xs text-neutral-600 mt-0.5">
+            <p className="text-xs text-[#555555] mt-0.5 font-normal">
               Handular Tech Hub • Student Center Building, 1st Floor, Room 104
             </p>
-            <p className="text-[11px] text-neutral-400 mt-1 flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5" />
+            <p className="text-[11px] text-[#777777] mt-1 flex items-center gap-1.5 font-normal">
+              <ClockIcon className="w-3.5 h-3.5" />
               <span>Available Monday to Saturday: 9:00 AM – 6:00 PM</span>
             </p>
           </div>
@@ -45,7 +50,7 @@ export const DealConfirmed: React.FC<DealConfirmedProps> = ({ token, onGoHome })
 
         {/* 4-Step Student Pickup Protocol */}
         <div>
-          <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-3">
+          <h4 className="text-xs font-normal text-[#777777] mb-2.5">
             Handular 4-Step Inspection Guarantee
           </h4>
           <div className="space-y-2.5">
@@ -55,8 +60,8 @@ export const DealConfirmed: React.FC<DealConfirmedProps> = ({ token, onGoHome })
               'Test power adapter, all ports, camera, keyboard, and speaker sound.',
               'Funds are held securely by Handular until you confirm 100% satisfaction.',
             ].map((step, idx) => (
-              <div key={idx} className="flex items-start gap-2.5 text-xs text-neutral-700">
-                <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+              <div key={idx} className="flex items-start gap-2.5 text-xs text-[#333333]">
+                <CheckCircleIcon className="w-4 h-4 text-[#30c5ce] flex-shrink-0 mt-0.5" />
                 <span>{step}</span>
               </div>
             ))}
@@ -64,16 +69,16 @@ export const DealConfirmed: React.FC<DealConfirmedProps> = ({ token, onGoHome })
         </div>
 
         {/* 30-Day Warranty Badge */}
-        <div className="p-4 rounded-xl bg-blue-50/40 border border-blue-200/60 flex items-center justify-between">
+        <div className="p-4 rounded-[12px] bg-[#10393b] text-white flex items-center justify-between">
           <div>
-            <span className="block text-xs font-bold text-[#0051c3]">
+            <span className="block text-xs font-normal text-white">
               30-Day Campus Warranty
             </span>
-            <span className="text-[11px] text-neutral-600">
+            <span className="text-[11px] text-white/70">
               Free repair or replacement if hardware defects arise.
             </span>
           </div>
-          <span className="text-xs font-semibold px-2 py-1 rounded bg-[#0051c3] text-white">
+          <span className="text-xs font-normal px-2.5 py-1 rounded-[6px] bg-white text-[#10393b]">
             Active
           </span>
         </div>
@@ -85,19 +90,20 @@ export const DealConfirmed: React.FC<DealConfirmedProps> = ({ token, onGoHome })
           href="https://wa.me/2348012345678?text=Hello%20Handular%20Team,%20I%20just%20reserved%20my%20device%20for%20request%20token%20"
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full sm:flex-1 h-12 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+          className="w-full sm:flex-1 h-11 rounded-[10px] bg-[#10393b] hover:bg-[#154b4d] text-white text-sm font-normal flex items-center justify-center gap-2 transition-all active:translate-y-[0.5px]"
         >
-          <Phone className="w-4 h-4" />
+          <ChatBubbleOvalLeftEllipsisIcon className="w-4 h-4 text-[#30c5ce]" />
           <span>Chat with Handular Hub on WhatsApp</span>
         </a>
 
-        <button
+        <Button
           onClick={onGoHome}
-          className="w-full sm:w-auto h-12 px-5 rounded-xl border border-neutral-200/80 text-sm font-medium text-neutral-700 hover:bg-neutral-50 flex items-center justify-center gap-1.5 transition-colors"
+          variant="secondary"
+          size="lg"
+          className="w-full sm:w-auto h-11 text-sm font-normal"
         >
-          <ArrowLeft className="w-4 h-4" />
           <span>Back to Home</span>
-        </button>
+        </Button>
       </div>
     </div>
   );

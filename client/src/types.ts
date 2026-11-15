@@ -52,3 +52,43 @@ export interface OfferData {
   createdAt: string;
   seller?: SellerData;
 }
+
+export interface StudentUser {
+  id: string;
+  email: string;
+  fullName: string;
+  phone: string;
+  campus: string;
+  avatarUrl?: string;
+}
+
+export interface UserRequestSummary {
+  id: string;
+  publicToken: string;
+  category: 'LAPTOPS' | 'PHONES' | 'ACCESSORIES';
+  maxBudget: number;
+  status: 'OPEN' | 'BROADCASTED' | 'OFFERS_READY' | 'OFFER_SELECTED' | 'CLOSED_WON' | 'CLOSED_LOST' | 'EXPIRED';
+  createdAt: string;
+  offersCount: number;
+  lowestOffer: number | null;
+}
+
+export interface ChatSessionSummary {
+  id: string;
+  title: string;
+  trackingCode: string | null;
+  publicToken: string | null;
+  status: string;
+  offersCount: number;
+  isLocked: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatMessageItem {
+  id: string;
+  sender: 'bot' | 'user';
+  text?: string;
+  timestamp?: string;
+  status?: 'sending' | 'sent' | 'delivered';
+}

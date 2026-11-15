@@ -146,7 +146,7 @@ ${params.visionNotes || 'None'}
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: 'openai/gpt-oss-120b',
           messages: [
             {
               role: 'system',
@@ -194,28 +194,32 @@ Output MUST be strict JSON matching this schema:
   private heuristicExtraction(text: string): ExtractedSpecs {
     // Intelligent fallback extractor
     let price = 0;
-    const priceMatch = text.match(/(?:₦|N|NGN|price\s*is\s*)[\s:]*([0-9,]+)/i) || text.match(/([0-9]{2,3}(?:,[0-9]{3})+)/);
+    const priceMatch =
+      text.match(/(?:₦|NGN|\bN\b|\bprice\s*(?:is|:)?\s*)[\s:]*([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{4,8})/i) ||
+      text.match(/\b([0-9]{2,3}(?:,[0-9]{3})+)\b/);
     if (priceMatch) {
       price = parseFloat(priceMatch[1].replace(/,/g, ''));
     } else {
-      price = 720000;
+      price = 520000;
     }
 
     const brand = text.match(/macbook|apple/i)
       ? 'Apple'
       : text.match(/thinkpad|lenovo/i)
       ? 'Lenovo'
-      : text.match(/dell/i)
+      : text.match(/dell|xps/i)
       ? 'Dell'
-      : text.match(/hp/i)
+      : text.match(/hp|spectre|envy/i)
       ? 'HP'
-      : 'Apple';
+      : 'Lenovo';
 
-    const model = text.match(/macbook\s*pro\s*(?:14|16|2021|m1|m2|m3)?/i)
-      ? 'MacBook Pro 14" (2021)'
-      : text.match(/thinkpad\s*x1\s*carbon/i)
-      ? 'ThinkPad X1 Carbon Gen 9'
-      : 'MacBook Pro M1 Pro';
+    const modelMatch =
+      text.match(/thinkpad\s*(?:t\d+|x1\s*carbon|e\d+|l\d+|p\d+)?(?:\s*gen\s*\d+)?/i) ||
+      text.match(/spectre\s*(?:x360)?/i) ||
+      text.match(/xps\s*(?:13|15|17)?/i) ||
+      text.match(/macbook\s*pro\s*(?:14|16|2021|m1|m2|m3)?/i);
+
+    const model = modelMatch ? modelMatch[0] : (brand === 'Apple' ? 'MacBook Pro 14" (2021)' : `${brand} Business Laptop`);
 
     const ramMatch = text.match(/(\d+\s*GB)\s*(?:RAM|unified)/i);
     const ram = ramMatch ? ramMatch[1] : '16GB';

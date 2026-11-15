@@ -15,6 +15,8 @@ const CreateRequestSchema = z.object({
   minBudget: z.number().optional().default(150000),
   maxBudget: z.number().min(50000),
   preferredSpecs: z.string().optional(),
+  studentId: z.string().optional(),
+  chatSessionId: z.string().optional(),
 });
 
 function generateToken(): string {
@@ -55,10 +57,26 @@ export async function requestRoutes(fastify: FastifyInstance) {
       publicToken = generateToken();
     }
 
+    // Resolve studentId if not provided but buyerEmail matches a registered student
+    let resolvedStudentId = parseResult.data.studentId;
+    if (!resolvedStudentId && buyerEmail) {
+      const matchedStudent = await prisma.studentUser.findUnique({
+        where: { email: buyerEmail.toLowerCase() },
+      });
+      if (matchedStudent) resolvedStudentId = matchedStudent.id;
+    }
+
+    // Generate 4-digit student verification PIN for campus pickup verification
+    const pin = Math.floor(1000 + Math.random() * 9000).toString();
+    const trackingCode = `${publicToken}-${pin}`;
+
     // Create the BuyerRequest in PostgreSQL
     const newRequest = await prisma.buyerRequest.create({
       data: {
         publicToken,
+        trackingCode,
+        chatSessionId: parseResult.data.chatSessionId || undefined,
+        studentId: resolvedStudentId || undefined,
         buyerName,
         buyerPhone,
         buyerEmail,
@@ -75,6 +93,18 @@ export async function requestRoutes(fastify: FastifyInstance) {
       },
     });
 
+    // If chatSessionId provided, link & update chat session status and tracking
+    if (parseResult.data.chatSessionId) {
+      await prisma.chatSession.update({
+        where: { id: parseResult.data.chatSessionId },
+        data: {
+          trackingCode,
+          status: 'SOURCING',
+          title: brand && brand !== 'any' ? `${brand} (${useCase})` : `${category} (${useCase})`,
+        },
+      }).catch(() => {});
+    }
+
     // Match verified sellers tagged with this category and broadcast distribution
     const broadcastResult = await broadcastService.broadcastRequest(newRequest.id);
 
@@ -83,6 +113,7 @@ export async function requestRoutes(fastify: FastifyInstance) {
       data: {
         id: newRequest.id,
         publicToken: newRequest.publicToken,
+        trackingCode: newRequest.trackingCode,
         status: newRequest.status,
         sellersBroadcasted: broadcastResult.broadcastedCount,
         expiresAt: newRequest.expiresAt,
@@ -202,6 +233,53 @@ export async function requestRoutes(fastify: FastifyInstance) {
         },
       }),
     ]);
+
+    // Notify the winning seller across channels
+    try {
+      const seller = await prisma.seller.findUnique({ where: { id: offer.sellerId } });
+      if (seller) {
+        const dealText = `🎯 *DEAL ACCEPTED BY BUYER!*\n\n` +
+          `The student #${reqRecord.publicToken} has officially accepted your offer for:\n` +
+          `📦 *Device:* ${offer.brand} ${offer.model}\n` +
+          `💰 *Agreed Price:* ₦${Number(offer.price).toLocaleString()}\n\n` +
+          `🔒 Escrow hold initiated. Campus ops is coordinating the physical inspection and pickup handover!`;
+
+        // 1. Dispatch to Telegram
+        const botToken = process.env.TELEGRAM_BOT_TOKEN;
+        if (seller.telegramHandle && botToken) {
+          fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: seller.telegramHandle,
+              text: dealText,
+              parse_mode: 'Markdown',
+            }),
+          }).catch((err) => console.warn('Deal Telegram notify error:', err));
+        }
+
+        // 2. Dispatch to WhatsApp via Evolution API
+        const evoUrl = process.env.EVOLUTION_API_URL;
+        const evoKey = process.env.EVOLUTION_API_KEY;
+        const instance = process.env.EVOLUTION_INSTANCE_NAME || 'handular-bot';
+        if (seller.whatsappNumber && !seller.whatsappNumber.startsWith('tg_') && evoUrl && evoKey) {
+          const cleanPhone = seller.whatsappNumber.replace(/[^0-9]/g, '');
+          fetch(`${evoUrl}/message/sendText/${instance}`, {
+            method: 'POST',
+            headers: {
+              apikey: evoKey,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              number: cleanPhone,
+              text: dealText,
+            }),
+          }).catch((err) => console.warn('Deal WhatsApp notify error:', err));
+        }
+      }
+    } catch (notifyErr) {
+      console.warn('Post-deal seller notify error:', notifyErr);
+    }
 
     return {
       message: 'Deal locked in successfully! Preparing physical inspection and campus handover.',

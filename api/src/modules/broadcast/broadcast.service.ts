@@ -41,18 +41,25 @@ ${specs.notes ? `Buyer Notes: "${specs.notes}"\n` : ''}
     const broadcastResults = [];
 
     for (const seller of matchingSellers) {
-      const channel: ChannelType = seller.whatsappNumber ? ChannelType.WHATSAPP : ChannelType.TELEGRAM;
-      let sentSuccess = false;
+      let telegramSuccess = false;
+      let whatsappSuccess = false;
 
-      // 1. Dispatch to WhatsApp via Evolution API if configured
-      if (channel === ChannelType.WHATSAPP && seller.whatsappNumber) {
-        sentSuccess = await this.sendWhatsAppMessage(seller.whatsappNumber, broadcastText);
+      // 1. Dispatch to Telegram if telegramHandle is configured
+      if (seller.telegramHandle) {
+        telegramSuccess = await this.sendTelegramMessage(seller.telegramHandle, broadcastText);
+        console.log(`[Broadcast] Telegram dispatch to ${seller.businessName} (${seller.telegramHandle}): ${telegramSuccess ? 'SUCCESS' : 'FAILED'}`);
       }
 
-      // 2. Dispatch to Telegram if configured
-      if (!sentSuccess && seller.telegramHandle) {
-        sentSuccess = await this.sendTelegramMessage(seller.telegramHandle, broadcastText);
+      // 2. Dispatch to WhatsApp via Evolution API if configured and not dummy phone
+      if (seller.whatsappNumber && !seller.whatsappNumber.startsWith('tg_')) {
+        whatsappSuccess = await this.sendWhatsAppMessage(seller.whatsappNumber, broadcastText);
+        console.log(`[Broadcast] WhatsApp dispatch to ${seller.businessName} (${seller.whatsappNumber}): ${whatsappSuccess ? 'SUCCESS' : 'FAILED'}`);
       }
+
+      const sentSuccess = telegramSuccess || whatsappSuccess;
+      const channel = (whatsappSuccess && telegramSuccess) 
+        ? ChannelType.WHATSAPP 
+        : (whatsappSuccess ? ChannelType.WHATSAPP : ChannelType.TELEGRAM);
 
       // Record or update audit row in RequestBroadcast
       await prisma.requestBroadcast.upsert({
@@ -99,9 +106,9 @@ ${specs.notes ? `Buyer Notes: "${specs.notes}"\n` : ''}
     const evoKey = process.env.EVOLUTION_API_KEY;
     const instance = process.env.EVOLUTION_INSTANCE_NAME || 'handular-bot';
 
-    if (!evoUrl || evoKey === 'local-evolution-key') {
-      console.log(`[WhatsApp Broadcast SIMULATED] To: ${phone} -> Message: ${text.slice(0, 60)}...`);
-      return true;
+    if (!evoUrl || !evoKey) {
+      console.warn(`[WhatsApp Broadcast] Evolution API URL or key not configured.`);
+      return false;
     }
 
     try {
@@ -127,9 +134,9 @@ ${specs.notes ? `Buyer Notes: "${specs.notes}"\n` : ''}
   private async sendTelegramMessage(chatIdOrUsername: string, text: string): Promise<boolean> {
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
-    if (!botToken || botToken === 'local-telegram-token') {
-      console.log(`[Telegram Broadcast SIMULATED] To: ${chatIdOrUsername} -> Message: ${text.slice(0, 60)}...`);
-      return true;
+    if (!botToken) {
+      console.warn(`[Telegram Broadcast] Telegram bot token not configured.`);
+      return false;
     }
 
     try {

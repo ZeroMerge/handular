@@ -6,10 +6,15 @@ const prisma = new PrismaClient();
 
 export async function webhookRoutes(fastify: FastifyInstance) {
   // 1. WhatsApp Webhook (Evolution API / Baileys format)
-  fastify.post('/webhooks/whatsapp', async (request, reply) => {
+  const whatsappHandler = async (request: any, reply: any) => {
     const body = request.body as any;
 
     try {
+      // Ignore messages sent by the bot itself
+      if (body?.data?.key?.fromMe) {
+        return reply.send({ status: 'ignored_self_message' });
+      }
+
       // Extract sender phone, text, and media URLs from Evolution API webhook structure
       const remoteJid = body?.data?.key?.remoteJid || body?.sender || '';
       const sellerPhone = remoteJid.replace('@s.whatsapp.net', '').replace(/[^0-9]/g, '');
@@ -45,7 +50,10 @@ export async function webhookRoutes(fastify: FastifyInstance) {
       fastify.log.error(err);
       return reply.status(500).send({ error: err.message });
     }
-  });
+  };
+
+  fastify.post('/webhooks/whatsapp', whatsappHandler);
+  fastify.post('/api/v1/webhooks/whatsapp', whatsappHandler);
 
   // 2. Telegram Webhook (grammY format)
   fastify.post('/webhooks/telegram', async (request, reply) => {
@@ -97,43 +105,5 @@ export async function webhookRoutes(fastify: FastifyInstance) {
     } catch (err: any) {
       return reply.status(400).send({ error: err.message });
     }
-  });
-
-  // 5. Developer & Demo Simulator: Simulate verified seller responding to a request
-  fastify.post('/api/v1/simulation/simulate-seller-response', async (request, reply) => {
-    const body = (request.body as any) || {};
-    const {
-      token,
-      sellerPhone = '2348012345678',
-      message = 'Hello boss, I have a clean MacBook Pro 14" M1 Pro 16GB 512GB, 94% battery health, Grade A. Price is ₦720,000.',
-      photoUrl = 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1000&q=80',
-    } = body;
-
-    // Resolve buyer request if token provided
-    let reqId = undefined;
-    if (token) {
-      const req = await prisma.buyerRequest.findUnique({
-        where: { publicToken: token },
-      });
-      if (req) reqId = req.id;
-    }
-
-    // Feed message into debouncer
-    const ingest = await debouncerService.handleInboundMessage({
-      sellerPhone,
-      channel: 'WHATSAPP',
-      text: message,
-      photoUrl,
-      requestId: reqId,
-    });
-
-    // Process immediately for seamless demo/testing experience
-    const processResult = await debouncerService.processBatch(ingest.batchId, reqId);
-
-    return reply.status(201).send({
-      message: 'Simulated seller response ingested and processed through AI pipeline!',
-      ingest,
-      processResult,
-    });
   });
 }

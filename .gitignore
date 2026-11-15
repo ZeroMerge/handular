@@ -29,5 +29,8 @@ Thumbs.db
 *.swp
 *.swo
 
+# Scratch files
+scratch/
+
 # Prisma Generated Client
 # (keep in node_modules, generated on build)

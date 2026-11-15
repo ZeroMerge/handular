@@ -147,30 +147,40 @@ export const OfferShowcase: React.FC<OfferShowcaseProps> = ({
             </div>
           )}
 
-          {/* WIDGET 1: Clean Request Details Card */}
+          {/* WIDGET 1: Clean Request Details List */}
           {request && (
             <div className="p-4 rounded-[14px] bg-[#f5f4ef] space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase font-normal tracking-wider text-[#888888]">
-                  Request Details
-                </span>
-                <span className="text-xs font-normal text-[#10393b] font-mono">
-                  Max ₦{Number(request.maxBudget).toLocaleString()}
-                </span>
-              </div>
-              <div className="flex items-baseline justify-between gap-2">
-                <h3 className="text-base font-normal text-[#10393b]">
+              <span className="text-[10px] uppercase font-normal tracking-wider text-[#888888] block">
+                Request Details
+              </span>
+
+              <div className="space-y-1.5 text-xs font-normal text-[#10393b]">
+                {/* 1. Device / Brand */}
+                <div className="text-sm font-medium text-[#10393b]">
                   {request.targetSpecs?.brand && request.targetSpecs.brand !== 'any'
                     ? request.targetSpecs.brand
-                    : request.category}{' '}
-                  {request.targetSpecs?.useCase ? `• ${request.targetSpecs.useCase}` : ''}
-                </h3>
+                    : request.category}
+                </div>
+
+                {/* 2. Purpose / Use Case (Next line) */}
+                {request.targetSpecs?.useCase && (
+                  <div className="text-[#555555]">
+                    {request.targetSpecs.useCase}
+                  </div>
+                )}
+
+                {/* 3. Budget (Next line) */}
+                <div className="font-mono text-[#10393b]">
+                  Max ₦{Number(request.maxBudget).toLocaleString()}
+                </div>
+
+                {/* 4. Any other details added (Next line) */}
+                {request.targetSpecs?.notes && (
+                  <div className="text-[#666666] pt-1.5 border-t border-[#10393b]/5 leading-relaxed">
+                    {request.targetSpecs.notes}
+                  </div>
+                )}
               </div>
-              {request.targetSpecs?.notes && (
-                <p className="text-xs text-[#777777] font-normal pt-1 border-t border-[#10393b]/5">
-                  Notes: {request.targetSpecs.notes}
-                </p>
-              )}
             </div>
           )}
 

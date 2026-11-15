@@ -27,6 +27,25 @@ const getApiBaseUrl = () => {
 
 const API_BASE_URL = getApiBaseUrl();
 
+const getFriendlyStatus = (status: string) => {
+  switch (status) {
+    case 'OPEN':
+      return 'Active';
+    case 'BROADCASTED':
+      return 'Sourcing';
+    case 'OFFERS_READY':
+      return 'Offers Ready';
+    case 'DEAL_LOCKED':
+      return 'Matched';
+    case 'COMPLETED':
+      return 'Completed';
+    case 'CANCELLED':
+      return 'Cancelled';
+    default:
+      return status;
+  }
+};
+
 type NavTab = 'dashboard' | 'reviews' | 'requests' | 'sellers' | 'deals';
 
 export function App() {
@@ -440,7 +459,7 @@ export function App() {
 
                 <div className="bg-white rounded-[10px] p-5">
                   <span className="block text-xs font-normal text-[#888888] uppercase tracking-wider mb-1">
-                    Total Volume
+                    Total Sales
                   </span>
                   <span className="text-3xl font-normal text-emerald-600 font-mono">
                     ₦{metrics ? Number(metrics.totalVolume).toLocaleString() : '0'}
@@ -496,7 +515,7 @@ export function App() {
                                   Max ₦{Number(req.maxBudget).toLocaleString()}
                                 </span>
                                 <span className="text-[10px] px-2 py-0.5 rounded-[3px] bg-white text-[#10393b] font-normal">
-                                  {req.status}
+                                  {getFriendlyStatus(req.status)}
                                 </span>
                               </div>
                             </div>
@@ -643,7 +662,7 @@ export function App() {
                                 : 'bg-white text-[#10393b]'
                             }`}>
                               <span className={`w-1.5 h-1.5 rounded-full ${r.status === 'OFFERS_READY' ? 'bg-emerald-600' : 'bg-[#ffad24]'}`} />
-                              <span>{r.status}</span>
+                              <span>{getFriendlyStatus(r.status)}</span>
                             </span>
                           </div>
 
@@ -754,7 +773,7 @@ export function App() {
                 </div>
                 <div className="p-5 rounded-[8px] bg-[#eceae2]">
                   <span className="block text-xs font-normal text-[#777777] uppercase">
-                    Total Volume
+                    Total Sales
                   </span>
                   <span className="text-2xl font-normal text-emerald-700 font-mono mt-1 block">
                     ₦{metrics ? Number(metrics.totalVolume).toLocaleString() : '620,000'}
@@ -762,7 +781,7 @@ export function App() {
                 </div>
                 <div className="p-5 rounded-[8px] bg-[#eceae2]">
                   <span className="block text-xs font-normal text-[#777777] uppercase">
-                    Commission
+                    Earnings
                   </span>
                   <span className="text-2xl font-normal text-[#10393b] font-mono mt-1 block">
                     ₦{metrics ? Number(metrics.totalCommissions).toLocaleString() : '31,000'}

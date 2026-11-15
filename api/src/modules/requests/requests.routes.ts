@@ -176,9 +176,12 @@ export async function requestRoutes(fastify: FastifyInstance) {
 
     return {
       request: {
+        id: reqRecord.id,
         publicToken: reqRecord.publicToken,
+        trackingCode: reqRecord.trackingCode,
         buyerName: reqRecord.buyerName,
         category: reqRecord.category,
+        targetSpecs: reqRecord.targetSpecs,
         maxBudget: reqRecord.maxBudget,
         status: reqRecord.status,
       },

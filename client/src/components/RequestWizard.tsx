@@ -402,17 +402,6 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-6 flex flex-col h-[calc(100vh-5rem)]">
       {/* Conversation Thread - Pure Clean Chat Flow (NO Banners, NO Start Over) */}
       <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 pb-4 scroll-smooth">
-        {/* Centered Handular Assistant Avatar at start of conversation */}
-        <div className="flex flex-col items-center justify-center pt-2 pb-3 text-center">
-          <div className="w-12 h-12 rounded-full overflow-hidden bg-[#10393b] flex items-center justify-center shadow-none">
-            <img
-              src="/handular_icon.png"
-              alt="Handular"
-              className="w-full h-full object-cover"
-            />
-          </div>
-        </div>
-
         {messages.map((msg) => {
           const isUser = msg.sender === 'user';
           return (

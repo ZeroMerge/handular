@@ -34,43 +34,97 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   if (!isOpen) return null;
 
-  const formatDate = (isoString: string) => {
-    try {
-      const d = new Date(isoString);
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    } catch {
-      return '';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'DRAFT':
-        return 'Draft';
-      case 'OPEN':
-      case 'BROADCASTED':
-      case 'SOURCING':
-        return 'Sourcing';
-      case 'OFFERS_READY':
-        return 'Offers Ready';
-      case 'OFFER_SELECTED':
-      case 'CLOSED_WON':
-        return 'Reserved';
-      default:
-        return status;
-    }
-  };
-
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
-      {/* Translucent Backdrop */}
+    <>
+      {/* Backdrop: Full on mobile, transparent click-away on desktop */}
       <div
         onClick={onClose}
-        className="absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity duration-200"
+        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] md:bg-transparent md:backdrop-blur-none"
+        aria-label="Dismiss menu"
       />
 
-      {/* Slide-out Sidebar Drawer with Rounded Right Corners (Top Right & Bottom Right) */}
-      <div className="absolute inset-y-0 left-0 max-w-[320px] w-full bg-[#fbfaf7] rounded-tr-[24px] rounded-br-[24px] flex flex-col z-10 animate-in slide-in-from-left duration-200 ease-out select-none overflow-hidden">
+      {/* DESKTOP: Dropdown Box anchored below the hamburger within the page grid */}
+      <div className="hidden md:flex fixed top-16 left-[max(1rem,calc((100vw-56rem)/2+1rem))] w-80 max-h-[70vh] bg-[#fbfaf7] rounded-[16px] flex-col z-50 overflow-hidden ring-1 ring-black/10 select-none animate-in fade-in zoom-in-95 duration-150">
+        {/* Header */}
+        <div className="p-3.5 pb-2 flex items-center justify-between border-b border-[#10393b]/5">
+          <span className="text-[10px] font-normal tracking-wider text-[#888888] uppercase">
+            Recent Requests
+          </span>
+          <button
+            onClick={() => {
+              onNewChat();
+              onClose();
+            }}
+            title="New Request"
+            className="p-1 rounded-[6px] hover:bg-[#eceae2] text-[#10393b] transition-all cursor-pointer"
+          >
+            <PlusIcon className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Chats List: Strictly ONE line per item, no subtitles */}
+        <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+          {chats.length === 0 ? (
+            <div className="py-6 text-center text-xs text-[#888888]">
+              No past requests
+            </div>
+          ) : (
+            chats.map((c) => {
+              const isActive = c.id === activeChatId;
+              return (
+                <div
+                  key={c.id}
+                  onClick={() => {
+                    onSelectChat(c.id);
+                    onClose();
+                  }}
+                  className={`group flex items-center justify-between px-3 py-2 rounded-[8px] cursor-pointer text-xs font-normal transition-all ${
+                    isActive
+                      ? 'bg-[#10393b] text-white'
+                      : 'hover:bg-[#eceae2] text-[#10393b]'
+                  }`}
+                >
+                  <span className="truncate flex-1 pr-2">{c.title}</span>
+
+                  {!c.isLocked && c.status === 'DRAFT' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteChat(c.id);
+                      }}
+                      title="Delete draft"
+                      className={`opacity-0 group-hover:opacity-100 p-1 rounded-[4px] transition-all ${
+                        isActive
+                          ? 'hover:bg-white/20 text-white/80'
+                          : 'hover:bg-red-50 text-red-500'
+                      }`}
+                    >
+                      <TrashIcon className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Bottom Action */}
+        <div className="p-2.5 pt-1.5 border-t border-[#10393b]/5">
+          <button
+            onClick={() => {
+              onNewChat();
+              onClose();
+            }}
+            className="w-full h-9 rounded-[8px] bg-[#10393b] hover:bg-[#154b4d] active:bg-[#0c2a2b] text-white text-xs font-normal flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+          >
+            <PlusIcon className="w-3.5 h-3.5 shrink-0" />
+            <span>New Request</span>
+          </button>
+        </div>
+      </div>
+
+      {/* MOBILE: Slide-Out Drawer from Left with Curved Right Edges */}
+      <div className="md:hidden fixed inset-y-0 left-0 max-w-[280px] w-full bg-[#fbfaf7] rounded-tr-[24px] rounded-br-[24px] flex flex-col z-50 animate-in slide-in-from-left duration-200 ease-out select-none overflow-hidden">
         {/* Top Header: Official Handular Logo & Close */}
         <div className="h-16 px-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
@@ -93,7 +147,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           </button>
         </div>
 
-        {/* Chats List Section */}
+        {/* Chats List Section: Single Line Only */}
         <div className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
           <div className="px-3 py-1 text-[10px] font-normal tracking-wider text-[#999999] uppercase">
             Recent Requests
@@ -101,14 +155,11 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
           {chats.length === 0 ? (
             <div className="px-3 py-8 text-center text-xs text-[#888888]">
-              No chats yet. Start a new request below.
+              No chats yet.
             </div>
           ) : (
             chats.map((c) => {
               const isActive = c.id === activeChatId;
-              const dateStr = formatDate(c.createdAt || c.updatedAt);
-              const statusStr = getStatusLabel(c.status);
-
               return (
                 <div
                   key={c.id}
@@ -119,39 +170,22 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                       onSelectChat(c.id);
                       onClose();
                     }}
-                    className={`group relative flex items-center justify-between px-3 py-2.5 rounded-[10px] cursor-pointer transition-all ${
+                    className={`group flex items-center justify-between px-3 py-2.5 rounded-[10px] cursor-pointer text-xs font-normal transition-all ${
                       isActive
                         ? 'bg-[#10393b] text-white'
                         : 'hover:bg-[#eceae2] text-[#10393b]'
                     }`}
                   >
-                    <div className="min-w-0 flex-1 pr-2">
-                      <p
-                        className={`text-xs font-normal truncate ${
-                          isActive ? 'text-white' : 'text-[#10393b]'
-                        }`}
-                      >
-                        {c.title}
-                      </p>
-                      <p
-                        className={`text-[10px] font-normal truncate mt-0.5 ${
-                          isActive ? 'text-white/70' : 'text-[#888888]'
-                        }`}
-                      >
-                        {dateStr} • {statusStr}
-                        {c.trackingCode && ` • #${c.trackingCode}`}
-                      </p>
-                    </div>
+                    <span className="truncate flex-1 pr-2">{c.title}</span>
 
-                    {/* Delete Trash Icon: ONLY permitted for unsubmitted drafts */}
                     {!c.isLocked && c.status === 'DRAFT' && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           onDeleteChat(c.id);
                         }}
-                        title="Delete draft chat"
-                        className={`opacity-0 group-hover:opacity-100 p-1.5 rounded-[6px] transition-all ${
+                        title="Delete draft"
+                        className={`p-1 rounded-[4px] transition-all ${
                           isActive
                             ? 'hover:bg-white/20 text-white/80'
                             : 'hover:bg-red-50 text-red-500'
@@ -181,6 +215,6 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </>
   );
 };

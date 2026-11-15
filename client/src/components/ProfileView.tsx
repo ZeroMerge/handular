@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import {
-  DevicePhoneMobileIcon,
+  PhoneIcon,
   EnvelopeIcon,
   MapPinIcon,
   ArrowRightOnRectangleIcon,
@@ -219,7 +219,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             {/* Field 2: Phone */}
             <div className="p-3.5 rounded-[10px] bg-[#eceae2]">
               <div className="flex items-center gap-1.5 text-[#777777] text-[11px] font-normal mb-1">
-                <DevicePhoneMobileIcon className="w-3.5 h-3.5" />
+                <PhoneIcon className="w-3.5 h-3.5" />
                 <span>WhatsApp Phone</span>
               </div>
               <div className="text-xs sm:text-sm font-normal font-mono text-[#10393b] truncate">

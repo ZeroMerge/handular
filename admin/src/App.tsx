@@ -5,17 +5,19 @@ import {
   ListBulletIcon,
   UserGroupIcon,
   BanknotesIcon,
-  ArrowPathIcon,
+  ClockIcon,
   PlusIcon,
   CheckCircleIcon,
   DevicePhoneMobileIcon,
   ArrowRightOnRectangleIcon,
   XMarkIcon,
   ChevronRightIcon,
+  PencilSquareIcon,
 } from './components/ui/icons';
-import { DashboardMetrics, AdminRequestItem, ReviewItem, SellerRecord } from './types';
+import { DashboardMetrics, AdminRequestItem, ReviewItem, SellerRecord, AuditLogItem } from './types';
 import { Button } from './components/ui/button';
 import { AdminLogin } from './components/AdminLogin';
+import { CustomDropdown, DropdownOption } from './components/ui/CustomDropdown';
 
 const getApiBaseUrl = () => {
   const envUrl = import.meta.env.VITE_API_URL;
@@ -46,7 +48,28 @@ const getFriendlyStatus = (status: string) => {
   }
 };
 
-type NavTab = 'dashboard' | 'reviews' | 'requests' | 'sellers' | 'deals';
+type NavTab = 'dashboard' | 'reviews' | 'requests' | 'sellers' | 'deals' | 'audit';
+
+const CATEGORY_OPTIONS: DropdownOption[] = [
+  { value: 'ALL', label: 'All Categories' },
+  { value: 'LAPTOPS', label: 'Laptops' },
+  { value: 'PHONES', label: 'Phones' },
+  { value: 'ACCESSORIES', label: 'Accessories' },
+];
+
+const STATUS_OPTIONS: DropdownOption[] = [
+  { value: 'ALL', label: 'All Statuses' },
+  { value: 'OPEN', label: 'Active' },
+  { value: 'BROADCASTED', label: 'Sourcing' },
+  { value: 'OFFERS_READY', label: 'Offers Ready' },
+  { value: 'DEAL_LOCKED', label: 'Matched' },
+];
+
+const MODAL_CATEGORY_OPTIONS: DropdownOption[] = [
+  { value: 'LAPTOPS', label: 'Laptops' },
+  { value: 'PHONES', label: 'Phones' },
+  { value: 'ACCESSORIES', label: 'Accessories' },
+];
 
 export function App() {
   const [adminUser, setAdminUser] = useState<any>(() => {
@@ -62,8 +85,16 @@ export function App() {
   const [requests, setRequests] = useState<AdminRequestItem[]>([]);
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [sellers, setSellers] = useState<SellerRecord[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Filter states on requests page
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+
+  // In-admin Request Details Modal (no client app redirect!)
+  const [selectedRequest, setSelectedRequest] = useState<AdminRequestItem | null>(null);
 
   // Review modal state
   const [activeReview, setActiveReview] = useState<ReviewItem | null>(null);
@@ -76,16 +107,25 @@ export function App() {
   const [newSellerContact, setNewSellerContact] = useState('');
   const [newSellerPhone, setNewSellerPhone] = useState('');
   const [newSellerTelegram, setNewSellerTelegram] = useState('');
-  const [newSellerCategory, setNewSellerCategory] = useState<'LAPTOPS' | 'PHONES'>('LAPTOPS');
+  const [newSellerCategory, setNewSellerCategory] = useState<'LAPTOPS' | 'PHONES' | 'ACCESSORIES'>('LAPTOPS');
+
+  // Edit seller modal state
+  const [editingSeller, setEditingSeller] = useState<SellerRecord | null>(null);
+  const [editSellerName, setEditSellerName] = useState('');
+  const [editSellerContact, setEditSellerContact] = useState('');
+  const [editSellerPhone, setEditSellerPhone] = useState('');
+  const [editSellerTelegram, setEditSellerTelegram] = useState('');
+  const [editSellerCategory, setEditSellerCategory] = useState<'LAPTOPS' | 'PHONES' | 'ACCESSORIES'>('LAPTOPS');
 
   const fetchDashboardData = async () => {
     setIsRefreshing(true);
     try {
-      const [metricsRes, requestsRes, reviewsRes, sellersRes] = await Promise.all([
+      const [metricsRes, requestsRes, reviewsRes, sellersRes, auditRes] = await Promise.all([
         fetch(`${API_BASE_URL}/api/v1/admin/metrics`),
         fetch(`${API_BASE_URL}/api/v1/admin/requests`),
         fetch(`${API_BASE_URL}/api/v1/admin/reviews`),
         fetch(`${API_BASE_URL}/api/v1/admin/sellers`),
+        fetch(`${API_BASE_URL}/api/v1/admin/audit-logs`),
       ]);
 
       if (metricsRes.ok) {
@@ -102,6 +142,10 @@ export function App() {
       if (sellersRes.ok) {
         const d = await sellersRes.json();
         setSellers(d.data || []);
+      }
+      if (auditRes.ok) {
+        const d = await auditRes.json();
+        setAuditLogs(d.data || []);
       }
     } catch (err) {
       console.error('Error fetching admin data:', err);
@@ -211,6 +255,47 @@ export function App() {
     }
   };
 
+  const handleOpenEditSeller = (seller: SellerRecord) => {
+    setEditingSeller(seller);
+    setEditSellerName(seller.businessName);
+    setEditSellerContact(seller.contactName);
+    setEditSellerPhone(seller.whatsappNumber);
+    setEditSellerTelegram(seller.telegramHandle || '');
+    setEditSellerCategory((seller.categories[0] as any) || 'LAPTOPS');
+  };
+
+  const handleUpdateSeller = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSeller) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/admin/sellers/${editingSeller.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessName: editSellerName,
+          contactName: editSellerContact,
+          whatsappNumber: editSellerPhone,
+          telegramHandle: editSellerTelegram || undefined,
+          categories: [editSellerCategory],
+        }),
+      });
+      if (res.ok) {
+        setEditingSeller(null);
+        setActionMessage('Vendor updated.');
+        fetchDashboardData();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Filtered requests list
+  const filteredRequests = requests.filter((r) => {
+    const matchCat = categoryFilter === 'ALL' || r.category === categoryFilter;
+    const matchStatus = statusFilter === 'ALL' || r.status === statusFilter;
+    return matchCat && matchStatus;
+  });
+
   // If not logged into admin, display clean AdminLogin screen
   if (!adminUser) {
     return (
@@ -226,7 +311,7 @@ export function App() {
       {/* Sidebar - CLEAN, MINIMALIST, ZERO BORDERS, ZERO SHADOWS */}
       <aside className="w-56 bg-white flex flex-col justify-between hidden md:flex shrink-0">
         <div>
-          {/* Top Brand Bar */}
+          {/* Top Brand Logo */}
           <div className="h-16 px-5 flex items-center gap-3">
             <img
               src="/handular_icon.png"
@@ -341,6 +426,23 @@ export function App() {
                 <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
               )}
             </button>
+
+            <button
+              onClick={() => setCurrentTab('audit')}
+              className={`w-full h-9 px-3 rounded-[6px] text-xs flex items-center justify-between transition-all cursor-pointer ${
+                currentTab === 'audit'
+                  ? 'bg-black/10 text-[#0f2d2e] font-medium'
+                  : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <ClockIcon className="w-4 h-4" />
+                <span>Audit Log</span>
+              </div>
+              {currentTab === 'audit' && (
+                <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
+              )}
+            </button>
           </nav>
         </div>
 
@@ -362,54 +464,8 @@ export function App() {
         </div>
       </aside>
 
-      {/* Main Content Area */}
+      {/* Main Content Area - ZERO TOP HEADER BAR */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Header - CLEAN, ZERO BORDERS, ZERO SHADOWS */}
-        <header className="h-16 bg-white/95 backdrop-blur-md px-4 sm:px-8 flex items-center justify-between sticky top-0 z-20">
-          <div className="flex items-center gap-3">
-            <img
-              src="/handular_icon.png"
-              alt="Handular"
-              className="w-8 h-8 rounded-[4px] object-contain md:hidden"
-            />
-            <span className="text-base sm:text-lg font-normal text-[#10393b] capitalize">
-              {currentTab === 'dashboard' ? 'Dashboard' : currentTab}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={fetchDashboardData}
-              disabled={isRefreshing}
-              title="Refresh data"
-              className="text-xs"
-            >
-              <ArrowPathIcon className={`w-3.5 h-3.5 mr-1 ${isRefreshing ? 'animate-spin-smooth' : ''}`} />
-              <span className="hidden sm:inline">{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
-            </Button>
-
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setShowAddSellerModal(true)}
-              className="text-xs"
-            >
-              <PlusIcon className="w-3.5 h-3.5 mr-1" />
-              <span>New Vendor</span>
-            </Button>
-
-            <button
-              onClick={handleSignOut}
-              className="md:hidden p-2 rounded-[4px] text-[#888888] hover:text-red-600 transition-colors"
-              title="Sign Out"
-            >
-              <ArrowRightOnRectangleIcon className="w-4 h-4" />
-            </button>
-          </div>
-        </header>
-
         {/* Feedback Banner */}
         {actionMessage && (
           <div className="bg-[#10393b] text-white px-6 py-2.5 text-xs flex items-center justify-between animate-chat-morph">
@@ -428,6 +484,12 @@ export function App() {
           {/* TAB 1: DASHBOARD */}
           {currentTab === 'dashboard' && (
             <div key="dashboard" className="space-y-6 animate-chat-morph">
+              <div className="flex items-center justify-between">
+                <h1 className="text-xl sm:text-2xl font-normal text-[#10393b]">
+                  Dashboard
+                </h1>
+              </div>
+
               {/* KPI Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-white rounded-[10px] p-5">
@@ -522,15 +584,14 @@ export function App() {
                           </div>
 
                           <div className="flex items-center justify-end shrink-0">
-                            <a
-                              href={`http://localhost:5180/?token=${req.publicToken}&view=offers`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="h-8 px-3 rounded-[5px] bg-white hover:bg-[#FAF9F6] text-xs text-[#10393b] font-normal flex items-center gap-1.5 transition-all"
+                            <button
+                              type="button"
+                              onClick={() => setSelectedRequest(req)}
+                              className="h-8 px-3 rounded-[5px] bg-white hover:bg-[#FAF9F6] text-xs font-normal text-[#10393b] flex items-center gap-1.5 transition-all cursor-pointer"
                             >
                               <span>View</span>
                               <ChevronRightIcon className="w-3.5 h-3.5 text-[#777777]" />
-                            </a>
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -613,23 +674,34 @@ export function App() {
             </div>
           )}
 
-          {/* TAB 3: REQUESTS */}
+          {/* TAB 3: REQUESTS - NO GLOBAL VENDOR BUTTON, CLEAN FILTERS */}
           {currentTab === 'requests' && (
             <div key="requests" className="bg-white rounded-[10px] p-6 space-y-5 animate-chat-morph">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl sm:text-2xl font-normal text-[#10393b]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h2 className="text-xl sm:text-2xl font-normal text-[#10393b]">
                   Requests
-                </h3>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={fetchDashboardData}
-                  disabled={isRefreshing}
-                  className="text-xs"
-                >
-                  <ArrowPathIcon className={`w-3.5 h-3.5 mr-1 ${isRefreshing ? 'animate-spin-smooth' : ''}`} />
-                  <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
-                </Button>
+                </h2>
+
+                {/* Customized Clean Dropdown Filters */}
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <div className="w-40 sm:w-44">
+                    <CustomDropdown
+                      options={CATEGORY_OPTIONS}
+                      value={categoryFilter}
+                      onChange={setCategoryFilter}
+                      buttonHeightClass="h-9"
+                    />
+                  </div>
+
+                  <div className="w-36 sm:w-40">
+                    <CustomDropdown
+                      options={STATUS_OPTIONS}
+                      value={statusFilter}
+                      onChange={setStatusFilter}
+                      buttonHeightClass="h-9"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-2.5">
@@ -642,8 +714,12 @@ export function App() {
                       </div>
                     ))}
                   </div>
+                ) : filteredRequests.length === 0 ? (
+                  <div className="p-10 text-center text-xs text-[#888888] font-normal">
+                    No requests match the selected filters.
+                  </div>
                 ) : (
-                  requests.map((r) => (
+                  filteredRequests.map((r) => (
                     <div
                       key={r.id}
                       className="p-4 rounded-[6px] bg-[#eceae2] hover:bg-[#e4e1d7] transition-all"
@@ -673,16 +749,16 @@ export function App() {
                           </div>
                         </div>
 
+                        {/* In-Admin View Details Button (No client app redirect!) */}
                         <div className="flex items-center justify-end shrink-0">
-                          <a
-                            href={`http://localhost:5180/?token=${r.publicToken}&view=offers`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="h-8 px-3 rounded-[5px] bg-white hover:bg-[#FAF9F6] text-xs font-normal text-[#10393b] flex items-center justify-center gap-1.5 transition-all"
+                          <button
+                            type="button"
+                            onClick={() => setSelectedRequest(r)}
+                            className="h-8 px-3 rounded-[5px] bg-white hover:bg-[#FAF9F6] text-xs font-normal text-[#10393b] flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                           >
                             <span>View</span>
                             <ChevronRightIcon className="w-3.5 h-3.5 text-[#777777]" />
-                          </a>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -692,22 +768,22 @@ export function App() {
             </div>
           )}
 
-          {/* TAB 4: VENDORS */}
+          {/* TAB 4: VENDORS - TALL ADD VENDOR BUTTON & EDIT CAPABILITY */}
           {currentTab === 'sellers' && (
             <div key="sellers" className="space-y-6 animate-chat-morph">
               <div className="bg-white rounded-[10px] p-6 flex items-center justify-between">
                 <h2 className="text-xl sm:text-2xl font-normal text-[#10393b]">
                   Vendors
                 </h2>
-                <Button
-                  variant="primary"
-                  size="sm"
+                {/* Taller vertical padding matching client app */}
+                <button
+                  type="button"
                   onClick={() => setShowAddSellerModal(true)}
-                  className="text-xs"
+                  className="px-4 py-2.5 sm:py-3 bg-[#10393b] hover:bg-[#154b4d] text-white rounded-[6px] text-xs sm:text-sm font-medium flex items-center gap-1.5 transition-all cursor-pointer shadow-none border-0"
                 >
-                  <PlusIcon className="w-3.5 h-3.5 mr-1" />
+                  <PlusIcon className="w-4 h-4" />
                   <span>Add Vendor</span>
-                </Button>
+                </button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -721,9 +797,19 @@ export function App() {
                         <span className="font-normal text-sm text-[#10393b]">
                           {s.businessName}
                         </span>
-                        <span className="text-xs font-normal px-2 py-0.5 rounded-[3px] bg-emerald-50 text-emerald-800">
-                          ★ {s.rating}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-normal px-2 py-0.5 rounded-[3px] bg-emerald-50 text-emerald-800">
+                            ★ {s.rating}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditSeller(s)}
+                            className="p-1.5 rounded-[4px] hover:bg-[#eceae2] text-[#777777] hover:text-[#10393b] transition-colors"
+                            title="Edit Vendor"
+                          >
+                            <PencilSquareIcon className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
 
                       <div className="text-xs text-[#666666] space-y-1 mb-4 font-normal">
@@ -756,11 +842,9 @@ export function App() {
           {/* TAB 5: DEALS */}
           {currentTab === 'deals' && (
             <div key="deals" className="bg-white rounded-[10px] p-6 sm:p-8 space-y-6 animate-chat-morph">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-normal text-[#10393b]">
-                  Completed Deals
-                </h2>
-              </div>
+              <h2 className="text-xl sm:text-2xl font-normal text-[#10393b]">
+                Completed Deals
+              </h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="p-5 rounded-[8px] bg-[#eceae2]">
@@ -787,6 +871,53 @@ export function App() {
                     ₦{metrics ? Number(metrics.totalCommissions).toLocaleString() : '31,000'}
                   </span>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 6: IMMUTABLE AUDIT LOG */}
+          {currentTab === 'audit' && (
+            <div key="audit" className="bg-white rounded-[10px] p-6 space-y-5 animate-chat-morph">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl sm:text-2xl font-normal text-[#10393b]">
+                  Audit Log
+                </h2>
+                <span className="text-xs text-[#777777] font-mono">
+                  {auditLogs.length} immutable events
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                {auditLogs.map((log) => (
+                  <div
+                    key={log.id}
+                    className="p-3.5 rounded-[6px] bg-[#eceae2] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-all text-xs"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded-[3px] text-[10px] font-mono font-medium ${
+                          log.action.includes('APPROVED')
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : log.action.includes('DECLINED')
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-black/10 text-[#10393b]'
+                        }`}>
+                          {log.action}
+                        </span>
+                        <span className="text-[#333333] font-normal">
+                          {log.details}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-[#777777] font-mono">
+                        Actor: {log.actor}
+                      </div>
+                    </div>
+
+                    <div className="text-[11px] text-[#888888] font-mono shrink-0">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -862,7 +993,92 @@ export function App() {
           <BanknotesIcon className="w-5 h-5" />
           <span className="text-[10px]">Deals</span>
         </button>
+
+        <button
+          onClick={() => setCurrentTab('audit')}
+          className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-[6px] transition-all cursor-pointer ${
+            currentTab === 'audit'
+              ? 'bg-black/10 text-[#0f2d2e] font-medium'
+              : 'text-[#10393b]/60 hover:text-[#10393b]'
+          }`}
+        >
+          <ClockIcon className="w-5 h-5" />
+          <span className="text-[10px]">Audit</span>
+        </button>
       </nav>
+
+      {/* IN-ADMIN REQUEST DETAILS MODAL (NO REDIRECT TO CLIENT APP) */}
+      {selectedRequest && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-[10px] w-full max-w-lg p-6 sm:p-7 space-y-5 animate-chat-morph max-h-[90vh] overflow-y-auto no-scrollbar">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs font-normal px-2.5 py-1 rounded-[3px] bg-[#eceae2] text-[#10393b]">
+                  {selectedRequest.publicToken}
+                </span>
+                <span className={`px-2 py-0.5 rounded-[3px] text-[10px] font-normal ${
+                  selectedRequest.status === 'OFFERS_READY'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-[#eceae2] text-[#10393b]'
+                }`}>
+                  {getFriendlyStatus(selectedRequest.status)}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedRequest(null)}
+                className="w-7 h-7 rounded-[4px] hover:bg-[#eceae2] flex items-center justify-center text-[#777777] hover:text-[#10393b] cursor-pointer"
+              >
+                <XMarkIcon className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="p-3.5 rounded-[6px] bg-[#eceae2] space-y-1">
+                <span className="block text-[11px] text-[#777777] uppercase tracking-wider">
+                  Buyer Information
+                </span>
+                <p className="text-sm font-medium text-[#10393b]">
+                  {selectedRequest.buyerName}
+                </p>
+                <p className="text-xs font-mono text-[#666666]">
+                  {selectedRequest.buyerPhone}
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-[6px] bg-[#eceae2] space-y-1">
+                <span className="block text-[11px] text-[#777777] uppercase tracking-wider">
+                  Request Requirements
+                </span>
+                <div className="flex items-center justify-between text-xs text-[#10393b]">
+                  <span>Category: {selectedRequest.category}</span>
+                  <span className="font-mono font-medium">Max ₦{Number(selectedRequest.maxBudget).toLocaleString()}</span>
+                </div>
+                {selectedRequest.targetSpecs && Object.keys(selectedRequest.targetSpecs).length > 0 && (
+                  <p className="text-xs text-[#555555] pt-1">
+                    Specs: {JSON.stringify(selectedRequest.targetSpecs)}
+                  </p>
+                )}
+              </div>
+
+              <div className="p-3.5 rounded-[6px] bg-[#eceae2] flex items-center justify-between text-xs text-[#555555]">
+                <span>Sellers Contacted: {selectedRequest.sellersBroadcasted}</span>
+                <span>Offers Received: {selectedRequest.offersReceived}</span>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setSelectedRequest(null)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* INSPECT & APPROVE MODAL */}
       {activeReview && (
@@ -878,6 +1094,7 @@ export function App() {
                 </h3>
               </div>
               <button
+                type="button"
                 onClick={() => setActiveReview(null)}
                 className="w-7 h-7 rounded-[4px] hover:bg-[#eceae2] flex items-center justify-center text-[#777777] hover:text-[#10393b] cursor-pointer"
               >
@@ -957,7 +1174,7 @@ export function App() {
         </div>
       )}
 
-      {/* ADD VENDOR MODAL */}
+      {/* ADD VENDOR MODAL - WITH CUSTOM DROPDOWN */}
       {showAddSellerModal && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <form
@@ -1012,14 +1229,11 @@ export function App() {
             </div>
             <div>
               <span className="block text-xs font-normal text-[#555555] mb-1.5">Category</span>
-              <select
+              <CustomDropdown
+                options={MODAL_CATEGORY_OPTIONS}
                 value={newSellerCategory}
-                onChange={(e) => setNewSellerCategory(e.target.value as any)}
-                className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal cursor-pointer border-0"
-              >
-                <option value="LAPTOPS">Laptops</option>
-                <option value="PHONES">Phones</option>
-              </select>
+                onChange={(val) => setNewSellerCategory(val as any)}
+              />
             </div>
             <div className="flex items-center justify-end gap-2 pt-3">
               <Button
@@ -1036,6 +1250,84 @@ export function App() {
                 size="sm"
               >
                 Save Vendor
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* EDIT VENDOR MODAL - FULL EDITING SUPPORT */}
+      {editingSeller && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <form
+            onSubmit={handleUpdateSeller}
+            className="bg-white rounded-[10px] w-full max-w-md p-6 sm:p-7 space-y-4 animate-chat-morph"
+          >
+            <h3 className="text-base font-normal text-[#10393b]">
+              Edit Vendor: {editingSeller.businessName}
+            </h3>
+            <div>
+              <span className="block text-xs font-normal text-[#555555] mb-1.5">Business Name</span>
+              <input
+                required
+                type="text"
+                value={editSellerName}
+                onChange={(e) => setEditSellerName(e.target.value)}
+                className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
+              />
+            </div>
+            <div>
+              <span className="block text-xs font-normal text-[#555555] mb-1.5">Contact Person</span>
+              <input
+                required
+                type="text"
+                value={editSellerContact}
+                onChange={(e) => setEditSellerContact(e.target.value)}
+                className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
+              />
+            </div>
+            <div>
+              <span className="block text-xs font-normal text-[#555555] mb-1.5">WhatsApp Phone</span>
+              <input
+                required
+                type="text"
+                value={editSellerPhone}
+                onChange={(e) => setEditSellerPhone(e.target.value)}
+                className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
+              />
+            </div>
+            <div>
+              <span className="block text-xs font-normal text-[#555555] mb-1.5">Telegram (Optional)</span>
+              <input
+                type="text"
+                value={editSellerTelegram}
+                onChange={(e) => setEditSellerTelegram(e.target.value)}
+                className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
+              />
+            </div>
+            <div>
+              <span className="block text-xs font-normal text-[#555555] mb-1.5">Category</span>
+              <CustomDropdown
+                options={MODAL_CATEGORY_OPTIONS}
+                value={editSellerCategory}
+                onChange={(val) => setEditSellerCategory(val as any)}
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-3">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setEditingSeller(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+              >
+                Update Vendor
               </Button>
             </div>
           </form>

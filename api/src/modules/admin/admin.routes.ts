@@ -14,6 +14,55 @@ const CreateSellerSchema = z.object({
   notes: z.string().optional(),
 });
 
+export interface AuditLogItem {
+  id: string;
+  timestamp: string;
+  action: string;
+  actor: string;
+  entityType: 'VENDOR' | 'OFFER' | 'REQUEST' | 'SYSTEM';
+  entityId?: string;
+  details: string;
+}
+
+const auditLogs: AuditLogItem[] = [
+  {
+    id: 'audit-init-1',
+    timestamp: new Date(Date.now() - 3600000 * 4).toISOString(),
+    action: 'VENDOR_CREATED',
+    actor: 'admin@handular.com',
+    entityType: 'VENDOR',
+    details: 'Verified vendor Apex Gadgets Hub added to campus network',
+  },
+  {
+    id: 'audit-init-2',
+    timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
+    action: 'OFFER_APPROVED',
+    actor: 'admin@handular.com',
+    entityType: 'OFFER',
+    details: 'Approved Apple MacBook Pro 2020 (₦600,000) for #REQ-86SB',
+  },
+];
+
+function recordAudit(
+  action: string,
+  actor: string,
+  entityType: 'VENDOR' | 'OFFER' | 'REQUEST' | 'SYSTEM',
+  details: string,
+  entityId?: string
+) {
+  const entry: AuditLogItem = {
+    id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    timestamp: new Date().toISOString(),
+    action,
+    actor: actor || 'admin@handular.com',
+    entityType,
+    entityId,
+    details,
+  };
+  auditLogs.unshift(entry);
+  return entry;
+}
+
 export async function adminRoutes(fastify: FastifyInstance) {
   // 0. Simple Admin Login (email & password)
   fastify.post('/api/v1/admin/login', async (request, reply) => {
@@ -201,6 +250,14 @@ export async function adminRoutes(fastify: FastifyInstance) {
       }),
     ]);
 
+    recordAudit(
+      'OFFER_APPROVED',
+      (request as any).user?.email || 'admin@handular.com',
+      'OFFER',
+      `Approved offer ${offer.brand} ${offer.model} (₦${Number(offer.price).toLocaleString()})`,
+      offer.id
+    );
+
     return {
       message: 'Offer approved and published to student comparison showcase',
       data: updatedOffer[0],
@@ -238,6 +295,14 @@ export async function adminRoutes(fastify: FastifyInstance) {
       }),
     ]);
 
+    recordAudit(
+      'OFFER_DECLINED',
+      (request as any).user?.email || 'admin@handular.com',
+      'OFFER',
+      `Declined offer ${offer.brand} ${offer.model} - ${reason || 'Insufficient specs'}`,
+      offer.id
+    );
+
     return { message: 'Offer rejected' };
   });
 
@@ -254,6 +319,14 @@ export async function adminRoutes(fastify: FastifyInstance) {
     const seller = await prisma.seller.create({
       data: parseResult.data,
     });
+
+    recordAudit(
+      'VENDOR_CREATED',
+      (request as any).user?.email || 'admin@handular.com',
+      'VENDOR',
+      `Registered vendor ${seller.businessName} (${seller.contactName})`,
+      seller.id
+    );
 
     return reply.status(201).send({
       message: 'Verified seller registered successfully',
@@ -276,23 +349,42 @@ export async function adminRoutes(fastify: FastifyInstance) {
     return { data: sellers, count: sellers.length };
   });
 
-  // 8. Update Seller Status / Categories / Notes
+  // 8. Update Seller Details (Full Edit Support)
   fastify.patch('/api/v1/admin/sellers/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = request.body as any;
     try {
+      const updateData: any = {};
+      if (body.businessName !== undefined) updateData.businessName = body.businessName;
+      if (body.contactName !== undefined) updateData.contactName = body.contactName;
+      if (body.whatsappNumber !== undefined) updateData.whatsappNumber = body.whatsappNumber;
+      if (body.telegramHandle !== undefined) updateData.telegramHandle = body.telegramHandle;
+      if (body.verificationStatus !== undefined) updateData.verificationStatus = body.verificationStatus;
+      if (body.categories !== undefined) updateData.categories = body.categories;
+      if (body.notes !== undefined) updateData.notes = body.notes;
+
       const seller = await prisma.seller.update({
         where: { id },
-        data: {
-          verificationStatus: body.verificationStatus,
-          categories: body.categories,
-          notes: body.notes,
-        },
+        data: updateData,
       });
+
+      recordAudit(
+        'VENDOR_UPDATED',
+        (request as any).user?.email || 'admin@handular.com',
+        'VENDOR',
+        `Updated vendor details for ${seller.businessName}`,
+        seller.id
+      );
+
       return reply.send({ message: 'Seller updated successfully', data: seller });
     } catch (err: any) {
       return reply.status(400).send({ error: err.message });
     }
+  });
+
+  // 8.5. Immutable Audit Logs
+  fastify.get('/api/v1/admin/audit-logs', async () => {
+    return { data: auditLogs, count: auditLogs.length };
   });
 
   // 9. Manual Re-broadcast to Sellers

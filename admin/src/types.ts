@@ -67,3 +67,14 @@ export interface SellerRecord {
   notes?: string;
   createdAt: string;
 }
+
+export interface AuditLogItem {
+  id: string;
+  timestamp: string;
+  action: string;
+  actor: string;
+  entityType: 'VENDOR' | 'OFFER' | 'REQUEST' | 'SYSTEM';
+  entityId?: string;
+  details: string;
+}
+

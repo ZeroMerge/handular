@@ -11,6 +11,7 @@ import {
 } from './ui/icons';
 import { StudentUser } from '../types';
 import { Button } from './ui/button';
+import { CustomDropdown } from './ui/CustomDropdown';
 
 interface AuthScreenProps {
   apiBaseUrl: string;
@@ -157,20 +158,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                 <label className="block text-xs font-normal text-[#555555] mb-1">
                   Campus Pickup Hub
                 </label>
-                <div className="relative">
-                  <MapPinIcon className="w-4 h-4 text-[#888888] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <select
-                    value={campus}
-                    onChange={(e) => setCampus(e.target.value)}
-                    className="w-full h-11 pl-10 pr-4 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none transition-all focus:ring-2 focus:ring-[#30c5ce]/30 font-normal"
-                  >
-                    {campusOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <CustomDropdown
+                  options={campusOptions}
+                  value={campus}
+                  onChange={setCampus}
+                  icon={<MapPinIcon className="w-4 h-4" />}
+                />
               </div>
             </>
           )}

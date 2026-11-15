@@ -5,6 +5,7 @@ import {
   EyeIcon,
   EyeSlashIcon,
   ExclamationCircleIcon,
+  ArrowPathIcon,
 } from './ui/icons';
 import { Button } from './ui/button';
 
@@ -58,7 +59,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
       </div>
 
       {/* Main Centered Squircle Card - ZERO BORDERS, ZERO SHADOWS */}
-      <div className="w-full max-w-[380px] bg-white rounded-[18px] p-6 sm:p-8">
+      <div className="w-full max-w-[380px] bg-white rounded-[18px] p-6 sm:p-8 animate-chat-morph">
         {/* Title - Increased one notch */}
         <div className="text-center mb-5">
           <h1 className="text-2xl sm:text-3xl font-normal tracking-tight text-[#10393b] mb-1">
@@ -129,7 +130,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
               disabled={loading}
             >
               {loading ? (
-                <div className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                <ArrowPathIcon className="w-4 h-4 animate-spin-smooth text-white" />
               ) : (
                 'Sign In to Ops'
               )}

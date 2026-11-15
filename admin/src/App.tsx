@@ -9,12 +9,12 @@ import {
   PlusIcon,
   CheckCircleIcon,
   ArrowRightIcon,
-  ArrowTopRightOnSquareIcon,
   ShieldCheckIcon,
   MagnifyingGlassIcon,
   DevicePhoneMobileIcon,
   ArrowRightOnRectangleIcon,
   XMarkIcon,
+  ChevronRightIcon,
 } from './components/ui/icons';
 import { DashboardMetrics, AdminRequestItem, ReviewItem, SellerRecord } from './types';
 import { Button } from './components/ui/button';
@@ -47,6 +47,8 @@ export function App() {
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [sellers, setSellers] = useState<SellerRecord[]>([]);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSweeping, setIsSweeping] = useState(false);
 
   // Review modal state
   const [activeReview, setActiveReview] = useState<ReviewItem | null>(null);
@@ -62,6 +64,7 @@ export function App() {
   const [newSellerCategory, setNewSellerCategory] = useState<'LAPTOPS' | 'PHONES'>('LAPTOPS');
 
   const fetchDashboardData = async () => {
+    setIsRefreshing(true);
     try {
       const [metricsRes, requestsRes, reviewsRes, sellersRes] = await Promise.all([
         fetch(`${API_BASE_URL}/api/v1/admin/metrics`),
@@ -87,6 +90,8 @@ export function App() {
       }
     } catch (err) {
       console.error('Error fetching admin data:', err);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -192,6 +197,7 @@ export function App() {
   };
 
   const handleDebouncerSweep = async () => {
+    setIsSweeping(true);
     try {
       const res = await fetch(`${API_BASE_URL}/api/v1/debouncer/sweep`, {
         method: 'POST',
@@ -203,6 +209,8 @@ export function App() {
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      setIsSweeping(false);
     }
   };
 
@@ -218,7 +226,7 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-[#f5f4ef] flex font-sans text-[#10393b] selection:bg-[#10393b] selection:text-white">
-      {/* Sidebar - ZERO BORDERS, ZERO SHADOWS */}
+      {/* Sidebar - ZERO BORDERS, ZERO SHADOWS, TRANSLUCENT SQUIRCLES */}
       <aside className="w-64 bg-white flex flex-col justify-between hidden md:flex shrink-0">
         <div>
           {/* Top Brand Bar - Centered Standalone Logo, Max Width */}
@@ -243,87 +251,108 @@ export function App() {
             </div>
           </div>
 
-          {/* Navigation Links - ZERO SHADOWS */}
-          <nav className="px-2 space-y-1">
+          {/* Navigation Links - ZERO BORDERS, ZERO SHADOWS, FADED ASH ACTIVE STATE */}
+          <nav className="px-3 space-y-1">
             <button
               onClick={() => setCurrentTab('dashboard')}
-              className={`w-full h-10 px-3 rounded-[10px] text-xs font-normal flex items-center justify-between transition-all cursor-pointer ${
+              className={`w-full h-10 px-3 rounded-[10px] text-xs flex items-center justify-between transition-all cursor-pointer ${
                 currentTab === 'dashboard'
-                  ? 'bg-[#10393b] text-white'
-                  : 'text-[#555555] hover:bg-[#eceae2] hover:text-[#10393b]'
+                  ? 'bg-black/10 text-[#0f2d2e] font-medium'
+                  : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
               }`}
             >
               <div className="flex items-center gap-2.5">
                 <Squares2X2Icon className="w-4 h-4" />
                 <span>Command Center</span>
               </div>
+              {currentTab === 'dashboard' && (
+                <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
+              )}
             </button>
 
             <button
               onClick={() => setCurrentTab('reviews')}
-              className={`w-full h-10 px-3 rounded-[10px] text-xs font-normal flex items-center justify-between transition-all cursor-pointer ${
+              className={`w-full h-10 px-3 rounded-[10px] text-xs flex items-center justify-between transition-all cursor-pointer ${
                 currentTab === 'reviews'
-                  ? 'bg-[#10393b] text-white'
-                  : 'text-[#555555] hover:bg-[#eceae2] hover:text-[#10393b]'
+                  ? 'bg-black/10 text-[#0f2d2e] font-medium'
+                  : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
               }`}
             >
               <div className="flex items-center gap-2.5">
                 <ClipboardDocumentCheckIcon className="w-4 h-4" />
                 <span>Review Queue</span>
               </div>
-              {reviews.length > 0 && (
-                <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-normal bg-[#ffad24]/20 text-[#ffad24]">
-                  {reviews.length}
-                </span>
-              )}
+              <div className="flex items-center gap-1.5">
+                {reviews.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-normal bg-[#ffad24]/20 text-[#ffad24]">
+                    {reviews.length}
+                  </span>
+                )}
+                {currentTab === 'reviews' && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
+                )}
+              </div>
             </button>
 
             <button
               onClick={() => setCurrentTab('requests')}
-              className={`w-full h-10 px-3 rounded-[10px] text-xs font-normal flex items-center justify-between transition-all cursor-pointer ${
+              className={`w-full h-10 px-3 rounded-[10px] text-xs flex items-center justify-between transition-all cursor-pointer ${
                 currentTab === 'requests'
-                  ? 'bg-[#10393b] text-white'
-                  : 'text-[#555555] hover:bg-[#eceae2] hover:text-[#10393b]'
+                  ? 'bg-black/10 text-[#0f2d2e] font-medium'
+                  : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
               }`}
             >
               <div className="flex items-center gap-2.5">
                 <ListBulletIcon className="w-4 h-4" />
                 <span>Sourcing Board</span>
               </div>
-              <span className={`text-[11px] font-mono ${currentTab === 'requests' ? 'text-white/70' : 'text-[#888888]'}`}>
-                {requests.length}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-mono text-[#888888]">
+                  {requests.length}
+                </span>
+                {currentTab === 'requests' && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
+                )}
+              </div>
             </button>
 
             <button
               onClick={() => setCurrentTab('sellers')}
-              className={`w-full h-10 px-3 rounded-[10px] text-xs font-normal flex items-center justify-between transition-all cursor-pointer ${
+              className={`w-full h-10 px-3 rounded-[10px] text-xs flex items-center justify-between transition-all cursor-pointer ${
                 currentTab === 'sellers'
-                  ? 'bg-[#10393b] text-white'
-                  : 'text-[#555555] hover:bg-[#eceae2] hover:text-[#10393b]'
+                  ? 'bg-black/10 text-[#0f2d2e] font-medium'
+                  : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
               }`}
             >
               <div className="flex items-center gap-2.5">
                 <UserGroupIcon className="w-4 h-4" />
                 <span>Verified Vendors</span>
               </div>
-              <span className={`text-[11px] font-mono ${currentTab === 'sellers' ? 'text-white/70' : 'text-[#888888]'}`}>
-                {sellers.length}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-mono text-[#888888]">
+                  {sellers.length}
+                </span>
+                {currentTab === 'sellers' && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
+                )}
+              </div>
             </button>
 
             <button
               onClick={() => setCurrentTab('deals')}
-              className={`w-full h-10 px-3 rounded-[10px] text-xs font-normal flex items-center justify-between transition-all cursor-pointer ${
+              className={`w-full h-10 px-3 rounded-[10px] text-xs flex items-center justify-between transition-all cursor-pointer ${
                 currentTab === 'deals'
-                  ? 'bg-[#10393b] text-white'
-                  : 'text-[#555555] hover:bg-[#eceae2] hover:text-[#10393b]'
+                  ? 'bg-black/10 text-[#0f2d2e] font-medium'
+                  : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
               }`}
             >
               <div className="flex items-center gap-2.5">
                 <BanknotesIcon className="w-4 h-4" />
                 <span>Settlement & Escrow</span>
               </div>
+              {currentTab === 'deals' && (
+                <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
+              )}
             </button>
           </nav>
         </div>
@@ -350,11 +379,17 @@ export function App() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Header - ZERO BORDERS, ZERO SHADOWS, NORMAL FONT */}
-        <header className="h-16 bg-white/95 backdrop-blur-md px-4 sm:px-8 flex items-center justify-between sticky top-0 z-10">
+        {/* Top Header - ZERO BORDERS, ZERO SHADOWS, TRANSLUCENT BACKDROP */}
+        <header className="h-16 bg-white/95 backdrop-blur-md px-4 sm:px-8 flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-3">
+            {/* Mobile Brand Logo */}
+            <img
+              src="/handular_icon.png"
+              alt="Handular"
+              className="w-8 h-8 rounded-[8px] object-contain md:hidden"
+            />
             <span className="text-base sm:text-lg font-normal text-[#10393b] capitalize">
-              {currentTab}
+              {currentTab === 'dashboard' ? 'Command Center' : currentTab}
             </span>
             <span className="text-xs text-[#aaaaaa] hidden sm:inline">•</span>
             <span className="text-xs text-[#666666] hidden sm:inline font-normal">
@@ -362,31 +397,55 @@ export function App() {
             </span>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             <Button
               variant="secondary"
               size="sm"
               onClick={handleDebouncerSweep}
+              disabled={isSweeping}
               title="Run debouncer sweeper on message batches"
+              className="text-xs"
             >
-              <ArrowPathIcon className="w-3.5 h-3.5 mr-1.5" />
-              <span className="hidden sm:inline">Sweep Batches</span>
+              <ArrowPathIcon className={`w-3.5 h-3.5 mr-1 ${isSweeping ? 'animate-spin-smooth' : ''}`} />
+              <span className="hidden sm:inline">{isSweeping ? 'Sweeping...' : 'Sweep Batches'}</span>
+            </Button>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={fetchDashboardData}
+              disabled={isRefreshing}
+              title="Refresh all admin data"
+              className="text-xs"
+            >
+              <ArrowPathIcon className={`w-3.5 h-3.5 mr-1 ${isRefreshing ? 'animate-spin-smooth' : ''}`} />
+              <span className="hidden sm:inline">{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
             </Button>
 
             <Button
               variant="primary"
               size="sm"
               onClick={() => setShowAddSellerModal(true)}
+              className="text-xs"
             >
               <PlusIcon className="w-3.5 h-3.5 mr-1" />
               <span>New Vendor</span>
             </Button>
+
+            {/* Mobile Exit Button */}
+            <button
+              onClick={handleSignOut}
+              className="md:hidden p-2 rounded-[8px] text-[#888888] hover:text-red-600 transition-colors"
+              title="Sign Out"
+            >
+              <ArrowRightOnRectangleIcon className="w-4 h-4" />
+            </button>
           </div>
         </header>
 
         {/* Global Feedback Banner */}
         {actionMessage && (
-          <div className="bg-[#10393b] text-white px-6 py-2.5 text-xs flex items-center justify-between">
+          <div className="bg-[#10393b] text-white px-6 py-2.5 text-xs flex items-center justify-between animate-chat-morph">
             <span className="font-normal">{actionMessage}</span>
             <button
               onClick={() => setActionMessage(null)}
@@ -397,11 +456,11 @@ export function App() {
           </div>
         )}
 
-        {/* Tab Pages */}
-        <main className="flex-1 p-4 sm:p-8 overflow-y-auto max-w-7xl w-full mx-auto">
+        {/* Tab Pages Container - NO SCROLLBAR, MORPHING TRANSITIONS */}
+        <main className="flex-1 p-4 sm:p-8 overflow-y-auto no-scrollbar max-w-7xl w-full mx-auto pb-24 md:pb-8">
           {/* TAB 1: COMMAND CENTER / DASHBOARD */}
           {currentTab === 'dashboard' && (
-            <div className="space-y-6">
+            <div key="dashboard" className="space-y-6 animate-chat-morph">
               {/* KPI Cards - ZERO BORDERS, ZERO SHADOWS */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-white rounded-[18px] p-5">
@@ -471,51 +530,65 @@ export function App() {
                     className="text-xs text-[#10393b] hover:text-[#154b4d] font-normal flex items-center gap-1 cursor-pointer"
                   >
                     <span>View all board</span>
-                    <ArrowRightIcon className="w-3.5 h-3.5" />
+                    <ChevronRightIcon className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
                 <div className="space-y-2.5">
-                  {requests.slice(0, 5).map((req) => (
-                    <div
-                      key={req.id}
-                      className="p-4 rounded-[10px] bg-[#eceae2] hover:bg-[#e4e1d7] flex items-center justify-between gap-4 transition-all"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-[10px] bg-white flex items-center justify-center text-sm font-normal text-[#10393b]">
-                          {req.category === 'LAPTOPS' ? '💻' : '📱'}
+                  {isRefreshing && requests.length === 0 ? (
+                    <div className="space-y-2.5">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="p-4 rounded-[10px] bg-[#eceae2] animate-pulse space-y-2">
+                          <div className="h-4 bg-[#e0ded6] rounded-[6px] w-1/4" />
+                          <div className="h-3 bg-[#e0ded6] rounded-[6px] w-1/2" />
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs font-normal text-[#10393b]">
-                              {req.publicToken}
-                            </span>
-                            <span className="text-xs text-[#333333] font-normal">
-                              {req.buyerName}
-                            </span>
-                            <span className="text-[10px] px-2 py-0.5 rounded-[5px] bg-white text-[#555555] font-normal">
-                              Max ₦{Number(req.maxBudget).toLocaleString()}
-                            </span>
-                          </div>
-                          <span className="text-xs text-[#666666] block mt-0.5 font-normal">
-                            Broadcasted to {req.sellersBroadcasted} vendors • Status: {req.status}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <a
-                          href={`http://localhost:5180/?token=${req.publicToken}&view=offers`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="h-8 px-3 rounded-[10px] bg-white hover:bg-[#FAF9F6] text-xs text-[#10393b] font-normal flex items-center gap-1.5 transition-all"
-                        >
-                          <span>Buyer View</span>
-                          <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5 text-[#777777]" />
-                        </a>
-                      </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : (
+                    requests.slice(0, 5).map((req) => (
+                      <div
+                        key={req.id}
+                        className="p-4 rounded-[10px] bg-[#eceae2] hover:bg-[#e4e1d7] transition-all"
+                      >
+                        {/* Responsive 2-Row Clean Layout */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 rounded-[10px] bg-white flex items-center justify-center text-sm font-normal text-[#10393b] shrink-0">
+                              {req.category === 'LAPTOPS' ? '💻' : '📱'}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-mono text-xs font-normal text-[#10393b]">
+                                  {req.publicToken}
+                                </span>
+                                <span className="text-xs text-[#333333] font-normal truncate">
+                                  {req.buyerName}
+                                </span>
+                                <span className="text-[10px] px-2 py-0.5 rounded-[6px] bg-white text-[#555555] font-normal">
+                                  Max ₦{Number(req.maxBudget).toLocaleString()}
+                                </span>
+                              </div>
+                              <span className="text-xs text-[#666666] block mt-0.5 font-normal truncate">
+                                Broadcasted to {req.sellersBroadcasted} vendors • Status: {req.status}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-end shrink-0">
+                            <a
+                              href={`http://localhost:5180/?token=${req.publicToken}&view=offers`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="h-8 px-3 rounded-[8px] bg-white hover:bg-[#FAF9F6] text-xs text-[#10393b] font-normal flex items-center gap-1.5 transition-all"
+                            >
+                              <span>Buyer View</span>
+                              <ChevronRightIcon className="w-3.5 h-3.5 text-[#777777]" />
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
@@ -523,7 +596,7 @@ export function App() {
 
           {/* TAB 2: STAFF REVIEW QUEUE */}
           {currentTab === 'reviews' && (
-            <div className="space-y-6">
+            <div key="reviews" className="space-y-6 animate-chat-morph">
               <div className="bg-white rounded-[18px] p-6">
                 <h2 className="text-xl sm:text-2xl font-normal text-[#10393b] mb-1">
                   Multimodal AI Offer Verification Queue
@@ -568,8 +641,10 @@ export function App() {
                             variant="primary"
                             size="sm"
                             onClick={() => handleOpenReview(rev)}
+                            className="text-xs"
                           >
-                            Inspect & Verify
+                            <span>Inspect & Verify</span>
+                            <ChevronRightIcon className="w-3.5 h-3.5 ml-1" />
                           </Button>
                         </div>
                       </div>
@@ -602,8 +677,8 @@ export function App() {
 
           {/* TAB 3: REQUESTS BOARD */}
           {currentTab === 'requests' && (
-            <div className="bg-white rounded-[18px] p-6">
-              <div className="flex items-center justify-between mb-5">
+            <div key="requests" className="bg-white rounded-[18px] p-6 space-y-5 animate-chat-morph">
+              <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xl sm:text-2xl font-normal text-[#10393b]">
                     Active Buyer Requests Board
@@ -616,60 +691,83 @@ export function App() {
                   variant="secondary"
                   size="sm"
                   onClick={fetchDashboardData}
+                  disabled={isRefreshing}
+                  className="text-xs"
                 >
-                  <ArrowPathIcon className="w-3.5 h-3.5 mr-1" />
-                  <span>Refresh</span>
+                  <ArrowPathIcon className={`w-3.5 h-3.5 mr-1 ${isRefreshing ? 'animate-spin-smooth' : ''}`} />
+                  <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
                 </Button>
               </div>
 
               <div className="space-y-2.5">
-                {requests.map((r) => (
-                  <div
-                    key={r.id}
-                    className="p-4 rounded-[10px] bg-[#eceae2] hover:bg-[#e4e1d7] flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-normal text-[#10393b]">
-                          {r.publicToken}
-                        </span>
-                        <span className="text-xs font-normal text-[#10393b]">{r.buyerName}</span>
-                        <span className="text-[11px] text-[#777777] font-mono">({r.buyerPhone})</span>
-                        <span className={`px-2 py-0.5 rounded-[5px] text-[10px] font-normal ${
-                          r.status === 'OFFERS_READY'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-white text-[#10393b]'
-                        }`}>
-                          {r.status}
-                        </span>
+                {isRefreshing && requests.length === 0 ? (
+                  <div className="space-y-2.5">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="p-4 rounded-[10px] bg-[#eceae2] animate-pulse space-y-2">
+                        <div className="h-4 bg-[#e0ded6] rounded-[6px] w-1/4" />
+                        <div className="h-3 bg-[#e0ded6] rounded-[6px] w-1/2" />
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-[#666666] font-normal">
-                        <span>{r.category}</span>
-                        <span>•</span>
-                        <span>Max ₦{Number(r.maxBudget).toLocaleString()}</span>
-                        <span>•</span>
-                        <span>{r.sellersBroadcasted} vendors</span>
+                    ))}
+                  </div>
+                ) : (
+                  requests.map((r) => (
+                    <div
+                      key={r.id}
+                      className="p-4 rounded-[10px] bg-[#eceae2] hover:bg-[#e4e1d7] transition-all"
+                    >
+                      {/* Responsive 2-Row Card Structure */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="space-y-1.5 min-w-0 flex-1">
+                          {/* Row 1: Token, Buyer, Phone, Status Badge */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-mono text-xs font-normal text-[#10393b]">
+                              {r.publicToken}
+                            </span>
+                            <span className="text-xs font-normal text-[#10393b]">{r.buyerName}</span>
+                            <span className="text-[11px] text-[#777777] font-mono">({r.buyerPhone})</span>
+                            <span className={`px-2.5 py-0.5 rounded-[6px] text-[10px] font-normal inline-flex items-center gap-1.5 ${
+                              r.status === 'OFFERS_READY'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-white text-[#10393b]'
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${r.status === 'OFFERS_READY' ? 'bg-emerald-600' : 'bg-[#ffad24]'}`} />
+                              <span>{r.status}</span>
+                            </span>
+                          </div>
+
+                          {/* Row 2: Category, Budget, Vendors */}
+                          <div className="flex items-center gap-3 text-xs text-[#666666] font-normal">
+                            <span>{r.category}</span>
+                            <span>•</span>
+                            <span>Max ₦{Number(r.maxBudget).toLocaleString()}</span>
+                            <span>•</span>
+                            <span>{r.sellersBroadcasted} vendors contacted</span>
+                          </div>
+                        </div>
+
+                        {/* Action Link */}
+                        <div className="flex items-center justify-end shrink-0">
+                          <a
+                            href={`http://localhost:5180/?token=${r.publicToken}&view=offers`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="h-8 px-3 rounded-[8px] bg-white hover:bg-[#FAF9F6] text-xs font-normal text-[#10393b] flex items-center justify-center gap-1.5 transition-all"
+                          >
+                            <span>Buyer View</span>
+                            <ChevronRightIcon className="w-3.5 h-3.5 text-[#777777]" />
+                          </a>
+                        </div>
                       </div>
                     </div>
-
-                    <a
-                      href={`http://localhost:5180/?token=${r.publicToken}&view=offers`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="h-8 px-3 rounded-[10px] bg-white hover:bg-[#FAF9F6] text-xs font-normal text-[#10393b] flex items-center justify-center gap-1.5 transition-all self-start sm:self-auto shrink-0"
-                    >
-                      <span>Buyer View</span>
-                      <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5 text-[#777777]" />
-                    </a>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           )}
 
           {/* TAB 4: VERIFIED SELLERS */}
           {currentTab === 'sellers' && (
-            <div className="space-y-6">
+            <div key="sellers" className="space-y-6 animate-chat-morph">
               <div className="bg-white rounded-[18px] p-6 flex items-center justify-between">
                 <div>
                   <h2 className="text-xl sm:text-2xl font-normal text-[#10393b]">
@@ -683,6 +781,7 @@ export function App() {
                   variant="primary"
                   size="sm"
                   onClick={() => setShowAddSellerModal(true)}
+                  className="text-xs"
                 >
                   <PlusIcon className="w-3.5 h-3.5 mr-1" />
                   <span>Add Vendor</span>
@@ -712,7 +811,7 @@ export function App() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-3 bg-[#f5f4ef] -mx-5 -mb-5 px-5 py-3 rounded-b-[18px]">
+                    <div className="flex items-center justify-between pt-3 bg-[#eceae2] -mx-5 -mb-5 px-5 py-3 rounded-b-[18px]">
                       <span className="text-[10px] uppercase font-normal text-[#777777]">
                         {s.categories.join(', ')}
                       </span>
@@ -734,7 +833,7 @@ export function App() {
 
           {/* TAB 5: DEALS & ESCROW */}
           {currentTab === 'deals' && (
-            <div className="bg-white rounded-[18px] p-6 sm:p-8 space-y-6">
+            <div key="deals" className="bg-white rounded-[18px] p-6 sm:p-8 space-y-6 animate-chat-morph">
               <div>
                 <h2 className="text-xl sm:text-2xl font-normal text-[#10393b]">
                   Deal Settlement & Commission Escrow
@@ -745,7 +844,7 @@ export function App() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-5 rounded-[10px] bg-[#eceae2]">
+                <div className="p-5 rounded-[14px] bg-[#eceae2]">
                   <span className="block text-xs font-normal text-[#777777] uppercase">
                     Escrow Guaranteed Deals
                   </span>
@@ -753,7 +852,7 @@ export function App() {
                     {metrics ? metrics.completedDealsCount : 1}
                   </span>
                 </div>
-                <div className="p-5 rounded-[10px] bg-[#eceae2]">
+                <div className="p-5 rounded-[14px] bg-[#eceae2]">
                   <span className="block text-xs font-normal text-[#777777] uppercase">
                     Total Volume
                   </span>
@@ -761,7 +860,7 @@ export function App() {
                     ₦{metrics ? Number(metrics.totalVolume).toLocaleString() : '620,000'}
                   </span>
                 </div>
-                <div className="p-5 rounded-[10px] bg-[#eceae2]">
+                <div className="p-5 rounded-[14px] bg-[#eceae2]">
                   <span className="block text-xs font-normal text-[#777777] uppercase">
                     Campus Hub Commission
                   </span>
@@ -771,7 +870,7 @@ export function App() {
                 </div>
               </div>
 
-              <div className="p-4 rounded-[10px] bg-[#eceae2] text-xs text-[#444444] flex items-center justify-between font-normal">
+              <div className="p-4 rounded-[14px] bg-[#eceae2] text-xs text-[#444444] flex items-center justify-between font-normal">
                 <div className="flex items-center gap-2">
                   <ShieldCheckIcon className="w-4 h-4 text-emerald-600" />
                   <span>Campus Tech Lounge Escrow verification active at Room 104.</span>
@@ -783,10 +882,81 @@ export function App() {
         </main>
       </div>
 
-      {/* INSPECT & APPROVE MODAL - ZERO BORDERS, ZERO SHADOWS */}
+      {/* Mobile Bottom Navigation - ZERO BORDERS, ZERO SHADOWS, TRANSLUCENT SQUIRCLE */}
+      <nav className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md h-16 flex items-center justify-around z-30 md:hidden px-2">
+        <button
+          onClick={() => setCurrentTab('dashboard')}
+          className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-[10px] transition-all cursor-pointer ${
+            currentTab === 'dashboard'
+              ? 'bg-black/10 text-[#0f2d2e] font-medium'
+              : 'text-[#10393b]/60 hover:text-[#10393b]'
+          }`}
+        >
+          <Squares2X2Icon className="w-5 h-5" />
+          <span className="text-[10px]">Dashboard</span>
+        </button>
+
+        <button
+          onClick={() => setCurrentTab('reviews')}
+          className={`relative flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-[10px] transition-all cursor-pointer ${
+            currentTab === 'reviews'
+              ? 'bg-black/10 text-[#0f2d2e] font-medium'
+              : 'text-[#10393b]/60 hover:text-[#10393b]'
+          }`}
+        >
+          <ClipboardDocumentCheckIcon className="w-5 h-5" />
+          <span className="text-[10px]">Reviews</span>
+          {reviews.length > 0 && (
+            <span className="absolute top-1 right-2 w-2 h-2 rounded-full bg-[#ffad24]" />
+          )}
+        </button>
+
+        <button
+          onClick={() => setCurrentTab('requests')}
+          className={`relative flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-[10px] transition-all cursor-pointer ${
+            currentTab === 'requests'
+              ? 'bg-black/10 text-[#0f2d2e] font-medium'
+              : 'text-[#10393b]/60 hover:text-[#10393b]'
+          }`}
+        >
+          <ListBulletIcon className="w-5 h-5" />
+          <span className="text-[10px]">Requests</span>
+          {requests.length > 0 && (
+            <span className="absolute top-1 right-2 text-[9px] font-mono px-1 rounded-full bg-black/10 text-[#10393b]">
+              {requests.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setCurrentTab('sellers')}
+          className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-[10px] transition-all cursor-pointer ${
+            currentTab === 'sellers'
+              ? 'bg-black/10 text-[#0f2d2e] font-medium'
+              : 'text-[#10393b]/60 hover:text-[#10393b]'
+          }`}
+        >
+          <UserGroupIcon className="w-5 h-5" />
+          <span className="text-[10px]">Vendors</span>
+        </button>
+
+        <button
+          onClick={() => setCurrentTab('deals')}
+          className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-[10px] transition-all cursor-pointer ${
+            currentTab === 'deals'
+              ? 'bg-black/10 text-[#0f2d2e] font-medium'
+              : 'text-[#10393b]/60 hover:text-[#10393b]'
+          }`}
+        >
+          <BanknotesIcon className="w-5 h-5" />
+          <span className="text-[10px]">Escrow</span>
+        </button>
+      </nav>
+
+      {/* INSPECT & APPROVE MODAL - ZERO BORDERS, ZERO SHADOWS, MORPH TRANSITION */}
       {activeReview && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-[18px] w-full max-w-2xl max-h-[90vh] overflow-y-auto p-7 space-y-6">
+          <div className="bg-white rounded-[18px] w-full max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar p-6 sm:p-7 space-y-6 animate-chat-morph">
             <div className="flex items-center justify-between">
               <div>
                 <span className="font-mono text-xs font-normal px-2.5 py-1 rounded-[6px] bg-[#eceae2] text-[#10393b]">
@@ -845,7 +1015,7 @@ export function App() {
                     type="number"
                     value={editPrice}
                     onChange={(e) => setEditPrice(Number(e.target.value))}
-                    className="w-full h-11 px-3.5 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm font-mono font-normal text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30"
+                    className="w-full h-11 px-3.5 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm font-mono font-normal text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 border-0"
                   />
                 </div>
                 <div>
@@ -854,7 +1024,7 @@ export function App() {
                     type="text"
                     value={editGrade}
                     onChange={(e) => setEditGrade(e.target.value)}
-                    className="w-full h-11 px-3.5 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal"
+                    className="w-full h-11 px-3.5 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
                   />
                 </div>
               </div>
@@ -883,12 +1053,12 @@ export function App() {
         </div>
       )}
 
-      {/* ADD VENDOR MODAL - ZERO BORDERS, ZERO SHADOWS */}
+      {/* ADD VENDOR MODAL - ZERO BORDERS, ZERO SHADOWS, MORPH TRANSITION */}
       {showAddSellerModal && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <form
             onSubmit={handleCreateSeller}
-            className="bg-white rounded-[18px] w-full max-w-md p-7 space-y-4"
+            className="bg-white rounded-[18px] w-full max-w-md p-6 sm:p-7 space-y-4 animate-chat-morph"
           >
             <h3 className="text-base font-normal text-[#10393b]">
               Add Verified Campus Vendor
@@ -901,7 +1071,7 @@ export function App() {
                 placeholder="e.g. Apex Gadgets Hub"
                 value={newSellerName}
                 onChange={(e) => setNewSellerName(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal"
+                className="w-full h-11 px-3.5 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
               />
             </div>
             <div>
@@ -912,7 +1082,7 @@ export function App() {
                 placeholder="e.g. Samuel"
                 value={newSellerContact}
                 onChange={(e) => setNewSellerContact(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal"
+                className="w-full h-11 px-3.5 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
               />
             </div>
             <div>
@@ -923,7 +1093,7 @@ export function App() {
                 placeholder="e.g. 2348012345678"
                 value={newSellerPhone}
                 onChange={(e) => setNewSellerPhone(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal"
+                className="w-full h-11 px-3.5 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
               />
             </div>
             <div>
@@ -933,7 +1103,7 @@ export function App() {
                 placeholder="e.g. @jerus_tech"
                 value={newSellerTelegram}
                 onChange={(e) => setNewSellerTelegram(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal"
+                className="w-full h-11 px-3.5 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
               />
             </div>
             <div>
@@ -941,7 +1111,7 @@ export function App() {
               <select
                 value={newSellerCategory}
                 onChange={(e) => setNewSellerCategory(e.target.value as any)}
-                className="w-full h-11 px-3.5 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal cursor-pointer"
+                className="w-full h-11 px-3.5 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal cursor-pointer border-0"
               >
                 <option value="LAPTOPS">Laptops</option>
                 <option value="PHONES">Phones</option>

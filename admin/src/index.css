@@ -21,6 +21,7 @@ button, input, select, textarea {
   font-family: inherit;
 }
 
+/* Custom scrollbar fallback (hidden by default under no-scrollbar) */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -37,4 +38,53 @@ button, input, select, textarea {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #cbc8bd;
+}
+
+/* Utility to completely hide scrollbars while preserving full scrollability */
+.no-scrollbar::-webkit-scrollbar,
+.no-scrollbar *::-webkit-scrollbar,
+[data-admin-scroll]::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+.no-scrollbar,
+[data-admin-scroll] {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+/* Smooth continuous rotation animation */
+@keyframes spin-continuous {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-smooth {
+  animation: spin-continuous 0.65s linear infinite;
+}
+
+/* WhatsApp-style instant smooth morph animation for seamless tab switching */
+@keyframes whatsappMorph {
+  0% {
+    opacity: 0;
+    filter: blur(3px);
+    transform: scale(0.995);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: scale(1);
+  }
+}
+
+.animate-chat-morph {
+  animation: whatsappMorph 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: opacity, filter, transform;
 }

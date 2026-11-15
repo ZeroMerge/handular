@@ -13,6 +13,7 @@ import {
   XMarkIcon,
   ChevronRightIcon,
   PencilSquareIcon,
+  ChevronLeftIcon,
 } from './components/ui/icons';
 import { DashboardMetrics, AdminRequestItem, ReviewItem, SellerRecord, AuditLogItem } from './types';
 import { Button } from './components/ui/button';
@@ -88,6 +89,23 @@ export function App() {
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('handular_admin_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('handular_admin_sidebar_collapsed', String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   // Filter states on requests page
   const [categoryFilter, setCategoryFilter] = useState('ALL');
@@ -308,160 +326,312 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-[#f5f4ef] flex font-sans text-[#10393b] selection:bg-[#10393b] selection:text-white">
-      {/* Sidebar - CLEAN, MINIMALIST, ZERO BORDERS, ZERO SHADOWS */}
-      <aside className="w-56 bg-white flex flex-col justify-between hidden md:flex shrink-0">
+      {/* Sidebar - STICKY, NON-SCROLLABLE, COLLAPSIBLE (ICON-ONLY / LOGO-ONLY MODE) */}
+      <aside
+        className={`bg-white flex flex-col justify-between hidden md:flex shrink-0 sticky top-0 h-screen overflow-hidden transition-all duration-200 select-none ${
+          isSidebarCollapsed ? 'w-16' : 'w-56'
+        }`}
+      >
         <div>
-          {/* Top Brand Logo */}
-          <div className="h-16 px-5 flex items-center gap-3">
-            <img
-              src="/handular_icon.png"
-              alt="Handular"
-              className="w-8 h-8 max-w-[32px] rounded-[6px] object-contain"
-            />
-            <span className="text-sm font-medium tracking-tight text-[#10393b]">
-              Handular
-            </span>
-          </div>
+          {/* Top Brand Logo / Header */}
+          {isSidebarCollapsed ? (
+            <div className="h-16 flex items-center justify-center">
+              <button
+                onClick={toggleSidebar}
+                className="cursor-pointer p-1.5 rounded-[6px] hover:bg-[#eceae2] transition-colors"
+                title="Expand sidebar"
+              >
+                <img
+                  src="/handular_icon.png"
+                  alt="Handular"
+                  className="w-8 h-8 max-w-[32px] rounded-[6px] object-contain"
+                />
+              </button>
+            </div>
+          ) : (
+            <div className="h-16 px-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <img
+                  src="/handular_icon.png"
+                  alt="Handular"
+                  className="w-8 h-8 max-w-[32px] rounded-[6px] object-contain"
+                />
+                <span className="text-sm font-medium tracking-tight text-[#10393b]">
+                  Handular
+                </span>
+              </div>
+              <button
+                onClick={toggleSidebar}
+                className="w-7 h-7 rounded-[6px] flex items-center justify-center text-[#888888] hover:text-[#10393b] hover:bg-[#eceae2] transition-colors cursor-pointer"
+                title="Collapse sidebar"
+              >
+                <ChevronLeftIcon className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
           {/* Navigation Links */}
-          <nav className="px-3 pt-2 space-y-1">
-            <button
-              onClick={() => setCurrentTab('dashboard')}
-              className={`w-full h-9 px-3 rounded-[6px] text-xs flex items-center justify-between transition-all cursor-pointer ${
-                currentTab === 'dashboard'
-                  ? 'bg-black/10 text-[#0f2d2e] font-medium'
-                  : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
+          <nav className={isSidebarCollapsed ? 'px-2 pt-2 space-y-1.5' : 'px-3 pt-2 space-y-1'}>
+            {/* Dashboard */}
+            {isSidebarCollapsed ? (
+              <button
+                onClick={() => setCurrentTab('dashboard')}
+                title="Dashboard"
+                className={`w-10 h-10 mx-auto rounded-[6px] flex items-center justify-center transition-all cursor-pointer relative ${
+                  currentTab === 'dashboard'
+                    ? 'bg-black/10 text-[#0f2d2e]'
+                    : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b]'
+                }`}
+              >
                 <Squares2X2Icon className="w-4 h-4" />
-                <span>Dashboard</span>
-              </div>
-              {currentTab === 'dashboard' && (
-                <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
-              )}
-            </button>
+                {currentTab === 'dashboard' && (
+                  <span className="absolute right-1 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#10393b]" />
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={() => setCurrentTab('dashboard')}
+                className={`w-full h-9 px-3 rounded-[6px] text-xs flex items-center justify-between transition-all cursor-pointer ${
+                  currentTab === 'dashboard'
+                    ? 'bg-black/10 text-[#0f2d2e] font-medium'
+                    : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Squares2X2Icon className="w-4 h-4" />
+                  <span>Dashboard</span>
+                </div>
+                {currentTab === 'dashboard' && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
+                )}
+              </button>
+            )}
 
-            <button
-              onClick={() => setCurrentTab('reviews')}
-              className={`w-full h-9 px-3 rounded-[6px] text-xs flex items-center justify-between transition-all cursor-pointer ${
-                currentTab === 'reviews'
-                  ? 'bg-black/10 text-[#0f2d2e] font-medium'
-                  : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
+            {/* Reviews */}
+            {isSidebarCollapsed ? (
+              <button
+                onClick={() => setCurrentTab('reviews')}
+                title={`Reviews${reviews.length > 0 ? ` (${reviews.length} pending)` : ''}`}
+                className={`w-10 h-10 mx-auto rounded-[6px] flex items-center justify-center transition-all cursor-pointer relative ${
+                  currentTab === 'reviews'
+                    ? 'bg-black/10 text-[#0f2d2e]'
+                    : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b]'
+                }`}
+              >
                 <ClipboardDocumentCheckIcon className="w-4 h-4" />
-                <span>Reviews</span>
-              </div>
-              <div className="flex items-center gap-1.5">
                 {reviews.length > 0 && (
-                  <span className="px-1.5 py-0.5 rounded-[3px] text-[10px] font-normal bg-[#ffad24]/20 text-[#ffad24]">
-                    {reviews.length}
-                  </span>
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#ffad24]" />
                 )}
                 {currentTab === 'reviews' && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
+                  <span className="absolute right-1 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#10393b]" />
                 )}
-              </div>
-            </button>
+              </button>
+            ) : (
+              <button
+                onClick={() => setCurrentTab('reviews')}
+                className={`w-full h-9 px-3 rounded-[6px] text-xs flex items-center justify-between transition-all cursor-pointer ${
+                  currentTab === 'reviews'
+                    ? 'bg-black/10 text-[#0f2d2e] font-medium'
+                    : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <ClipboardDocumentCheckIcon className="w-4 h-4" />
+                  <span>Reviews</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {reviews.length > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-[3px] text-[10px] font-normal bg-[#ffad24]/20 text-[#ffad24]">
+                      {reviews.length}
+                    </span>
+                  )}
+                  {currentTab === 'reviews' && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
+                  )}
+                </div>
+              </button>
+            )}
 
-            <button
-              onClick={() => setCurrentTab('requests')}
-              className={`w-full h-9 px-3 rounded-[6px] text-xs flex items-center justify-between transition-all cursor-pointer ${
-                currentTab === 'requests'
-                  ? 'bg-black/10 text-[#0f2d2e] font-medium'
-                  : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
+            {/* Requests */}
+            {isSidebarCollapsed ? (
+              <button
+                onClick={() => setCurrentTab('requests')}
+                title={`Requests (${requests.length})`}
+                className={`w-10 h-10 mx-auto rounded-[6px] flex items-center justify-center transition-all cursor-pointer relative ${
+                  currentTab === 'requests'
+                    ? 'bg-black/10 text-[#0f2d2e]'
+                    : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b]'
+                }`}
+              >
                 <ListBulletIcon className="w-4 h-4" />
-                <span>Requests</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-mono text-[#888888]">
-                  {requests.length}
-                </span>
                 {currentTab === 'requests' && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
+                  <span className="absolute right-1 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#10393b]" />
                 )}
-              </div>
-            </button>
+              </button>
+            ) : (
+              <button
+                onClick={() => setCurrentTab('requests')}
+                className={`w-full h-9 px-3 rounded-[6px] text-xs flex items-center justify-between transition-all cursor-pointer ${
+                  currentTab === 'requests'
+                    ? 'bg-black/10 text-[#0f2d2e] font-medium'
+                    : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <ListBulletIcon className="w-4 h-4" />
+                  <span>Requests</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-mono text-[#888888]">
+                    {requests.length}
+                  </span>
+                  {currentTab === 'requests' && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
+                  )}
+                </div>
+              </button>
+            )}
 
-            <button
-              onClick={() => setCurrentTab('sellers')}
-              className={`w-full h-9 px-3 rounded-[6px] text-xs flex items-center justify-between transition-all cursor-pointer ${
-                currentTab === 'sellers'
-                  ? 'bg-black/10 text-[#0f2d2e] font-medium'
-                  : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
+            {/* Vendors */}
+            {isSidebarCollapsed ? (
+              <button
+                onClick={() => setCurrentTab('sellers')}
+                title={`Vendors (${sellers.length})`}
+                className={`w-10 h-10 mx-auto rounded-[6px] flex items-center justify-center transition-all cursor-pointer relative ${
+                  currentTab === 'sellers'
+                    ? 'bg-black/10 text-[#0f2d2e]'
+                    : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b]'
+                }`}
+              >
                 <UserGroupIcon className="w-4 h-4" />
-                <span>Vendors</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-mono text-[#888888]">
-                  {sellers.length}
-                </span>
                 {currentTab === 'sellers' && (
+                  <span className="absolute right-1 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#10393b]" />
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={() => setCurrentTab('sellers')}
+                className={`w-full h-9 px-3 rounded-[6px] text-xs flex items-center justify-between transition-all cursor-pointer ${
+                  currentTab === 'sellers'
+                    ? 'bg-black/10 text-[#0f2d2e] font-medium'
+                    : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <UserGroupIcon className="w-4 h-4" />
+                  <span>Vendors</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-mono text-[#888888]">
+                    {sellers.length}
+                  </span>
+                  {currentTab === 'sellers' && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
+                  )}
+                </div>
+              </button>
+            )}
+
+            {/* Deals */}
+            {isSidebarCollapsed ? (
+              <button
+                onClick={() => setCurrentTab('deals')}
+                title="Deals"
+                className={`w-10 h-10 mx-auto rounded-[6px] flex items-center justify-center transition-all cursor-pointer relative ${
+                  currentTab === 'deals'
+                    ? 'bg-black/10 text-[#0f2d2e]'
+                    : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b]'
+                }`}
+              >
+                <BanknotesIcon className="w-4 h-4" />
+                {currentTab === 'deals' && (
+                  <span className="absolute right-1 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#10393b]" />
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={() => setCurrentTab('deals')}
+                className={`w-full h-9 px-3 rounded-[6px] text-xs flex items-center justify-between transition-all cursor-pointer ${
+                  currentTab === 'deals'
+                    ? 'bg-black/10 text-[#0f2d2e] font-medium'
+                    : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <BanknotesIcon className="w-4 h-4" />
+                  <span>Deals</span>
+                </div>
+                {currentTab === 'deals' && (
                   <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
                 )}
-              </div>
-            </button>
+              </button>
+            )}
 
-            <button
-              onClick={() => setCurrentTab('deals')}
-              className={`w-full h-9 px-3 rounded-[6px] text-xs flex items-center justify-between transition-all cursor-pointer ${
-                currentTab === 'deals'
-                  ? 'bg-black/10 text-[#0f2d2e] font-medium'
-                  : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <BanknotesIcon className="w-4 h-4" />
-                <span>Deals</span>
-              </div>
-              {currentTab === 'deals' && (
-                <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
-              )}
-            </button>
-
-            <button
-              onClick={() => setCurrentTab('audit')}
-              className={`w-full h-9 px-3 rounded-[6px] text-xs flex items-center justify-between transition-all cursor-pointer ${
-                currentTab === 'audit'
-                  ? 'bg-black/10 text-[#0f2d2e] font-medium'
-                  : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
+            {/* Audit Log */}
+            {isSidebarCollapsed ? (
+              <button
+                onClick={() => setCurrentTab('audit')}
+                title="Audit Log"
+                className={`w-10 h-10 mx-auto rounded-[6px] flex items-center justify-center transition-all cursor-pointer relative ${
+                  currentTab === 'audit'
+                    ? 'bg-black/10 text-[#0f2d2e]'
+                    : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b]'
+                }`}
+              >
                 <ClockIcon className="w-4 h-4" />
-                <span>Audit Log</span>
-              </div>
-              {currentTab === 'audit' && (
-                <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
-              )}
-            </button>
+                {currentTab === 'audit' && (
+                  <span className="absolute right-1 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#10393b]" />
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={() => setCurrentTab('audit')}
+                className={`w-full h-9 px-3 rounded-[6px] text-xs flex items-center justify-between transition-all cursor-pointer ${
+                  currentTab === 'audit'
+                    ? 'bg-black/10 text-[#0f2d2e] font-medium'
+                    : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <ClockIcon className="w-4 h-4" />
+                  <span>Audit Log</span>
+                </div>
+                {currentTab === 'audit' && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
+                )}
+              </button>
+            )}
           </nav>
         </div>
 
         {/* Clean Sidebar Footer */}
-        <div className="p-4 text-[11px] text-[#888888]">
-          <div className="flex items-center justify-between">
-            <span className="truncate max-w-[120px] font-normal text-[#666666]">
-              {adminUser.email}
-            </span>
+        {isSidebarCollapsed ? (
+          <div className="p-3 text-[11px] text-[#888888] flex justify-center">
             <button
               onClick={handleSignOut}
-              className="text-[#888888] hover:text-red-600 font-normal flex items-center gap-1 cursor-pointer transition-colors"
-              title="Sign Out"
+              className="w-10 h-10 rounded-[6px] flex items-center justify-center text-[#888888] hover:text-red-600 hover:bg-[#eceae2] transition-colors cursor-pointer"
+              title={`Sign Out (${adminUser.email})`}
             >
-              <ArrowRightOnRectangleIcon className="w-3.5 h-3.5" />
-              <span>Exit</span>
+              <ArrowRightOnRectangleIcon className="w-4 h-4" />
             </button>
           </div>
-        </div>
+        ) : (
+          <div className="p-4 text-[11px] text-[#888888]">
+            <div className="flex items-center justify-between">
+              <span className="truncate max-w-[120px] font-normal text-[#666666]">
+                {adminUser.email}
+              </span>
+              <button
+                onClick={handleSignOut}
+                className="text-[#888888] hover:text-red-600 font-normal flex items-center gap-1 cursor-pointer transition-colors"
+                title="Sign Out"
+              >
+                <ArrowRightOnRectangleIcon className="w-3.5 h-3.5" />
+                <span>Exit</span>
+              </button>
+            </div>
+          </div>
+        )}
       </aside>
 
       {/* Main Content Area - ZERO TOP HEADER BAR */}
@@ -882,9 +1052,6 @@ export function App() {
                 <h2 className="text-xl sm:text-2xl font-normal text-[#10393b]">
                   Audit Log
                 </h2>
-                <span className="text-xs text-[#777777] font-mono">
-                  {auditLogs.length} immutable events
-                </span>
               </div>
 
               <div className="space-y-2">

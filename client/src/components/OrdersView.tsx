@@ -56,25 +56,29 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
     fetchMyRequests();
   }, [token]);
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, compact = false) => {
+    const sizeClasses = compact
+      ? 'px-2 py-1 rounded-[6px] text-[11px]'
+      : 'px-2.5 py-1.5 rounded-[7px] text-xs';
+
     switch (status) {
       case 'OFFERS_READY':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] text-xs font-normal bg-[#10393b] text-[#30c5ce]">
+          <span className={`inline-flex items-center gap-1.5 ${sizeClasses} font-normal bg-[#10393b] text-[#30c5ce]`}>
             <CheckCircleIcon className="w-3.5 h-3.5 text-[#30c5ce]" />
             Offers Ready
           </span>
         );
       case 'OFFER_SELECTED':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] text-xs font-normal bg-[#10393b] text-[#30c5ce]">
+          <span className={`inline-flex items-center gap-1.5 ${sizeClasses} font-normal bg-[#10393b] text-[#30c5ce]`}>
             <ShieldCheckIcon className="w-3.5 h-3.5 text-[#30c5ce]" />
             Deal Locked
           </span>
         );
       case 'CLOSED_WON':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] text-xs font-normal bg-[#10393b] text-emerald-400">
+          <span className={`inline-flex items-center gap-1.5 ${sizeClasses} font-normal bg-[#10393b] text-emerald-400`}>
             <ShieldCheckIcon className="w-3.5 h-3.5 text-emerald-400" />
             Completed
           </span>
@@ -83,7 +87,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       case 'OPEN':
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] text-xs font-normal bg-[#10393b] text-[#ffad24]">
+          <span className={`inline-flex items-center gap-1.5 ${sizeClasses} font-normal bg-[#10393b] text-[#ffad24]`}>
             <ClockIcon className="w-3.5 h-3.5 text-[#ffad24]" />
             Sourcing Sellers
           </span>
@@ -152,47 +156,97 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
             <div className="col-span-2 text-right">Action</div>
           </div>
 
-          {/* Table Rows - Clean Rows Separated by Background Gap */}
+          {/* Orders List: Mobile Cards + Desktop Table Rows */}
           {requests.map((req) => (
-            <div
-              key={req.id}
-              className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center px-4 py-3.5 rounded-[10px] bg-white hover:bg-white/80 transition-all"
-            >
-              <div className="col-span-3 flex items-center gap-2">
-                <span className="font-mono text-xs font-normal text-[#10393b]">
-                  #{req.publicToken}
-                </span>
-                {req.offersCount > 0 && (
-                  <span className="px-1.5 py-0.5 rounded-[5px] text-[10px] bg-emerald-50 text-emerald-700 font-normal">
-                    {req.offersCount} {req.offersCount === 1 ? 'offer' : 'offers'}
+            <React.Fragment key={req.id}>
+              {/* Mobile Order Card: Clean, balanced layout */}
+              <div
+                onClick={() => onSelectRequest(req.publicToken)}
+                className="md:hidden p-4 rounded-[14px] bg-white hover:bg-white/95 active:scale-[0.99] transition-all cursor-pointer space-y-3"
+              >
+                {/* Top: Code & Category on left, Status Badge on right */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-mono text-xs font-medium text-[#10393b]">
+                      #{req.publicToken}
+                    </span>
+                    <span className="text-xs text-[#bbbbbb]">•</span>
+                    <span className="text-xs text-[#555555] font-normal capitalize">
+                      {req.category.toLowerCase()}
+                    </span>
+                  </div>
+                  {getStatusBadge(req.status, true)}
+                </div>
+
+                {/* Bottom: Budget on left, Offers badge + Action button on right */}
+                <div className="flex items-center justify-between gap-3 pt-2.5 border-t border-[#10393b]/5">
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider text-[#888888] block leading-none mb-1">
+                      Budget
+                    </span>
+                    <span className="font-mono text-sm font-medium text-[#10393b] block leading-tight">
+                      ₦{Number(req.maxBudget).toLocaleString()}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {req.offersCount > 0 && (
+                      <span className="px-2 py-0.5 rounded-[5px] text-[11px] font-medium bg-emerald-50 text-emerald-700">
+                        {req.offersCount} {req.offersCount === 1 ? 'offer' : 'offers'}
+                      </span>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectRequest(req.publicToken);
+                      }}
+                      className="h-8 px-3 rounded-[8px] bg-[#10393b] hover:bg-[#154b4d] active:bg-[#0c2a2b] text-white text-xs font-normal flex items-center gap-1 transition-all cursor-pointer shadow-none"
+                    >
+                      <span>View Offers</span>
+                      <ChevronRightIcon className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Desktop Table Row */}
+              <div className="hidden md:grid grid-cols-12 gap-3 items-center px-4 py-3.5 rounded-[10px] bg-white hover:bg-white/80 transition-all">
+                <div className="col-span-3 flex items-center gap-2">
+                  <span className="font-mono text-xs font-normal text-[#10393b]">
+                    #{req.publicToken}
                   </span>
-                )}
-              </div>
+                  {req.offersCount > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-[5px] text-[10px] bg-emerald-50 text-emerald-700 font-normal">
+                      {req.offersCount} {req.offersCount === 1 ? 'offer' : 'offers'}
+                    </span>
+                  )}
+                </div>
 
-              <div className="col-span-2 text-xs text-[#555555] font-normal">
-                {req.category}
-              </div>
+                <div className="col-span-2 text-xs text-[#555555] font-normal">
+                  {req.category}
+                </div>
 
-              <div className="col-span-2 text-xs text-[#10393b] font-normal font-mono">
-                ₦{Number(req.maxBudget).toLocaleString()}
-              </div>
+                <div className="col-span-2 text-xs text-[#10393b] font-normal font-mono">
+                  ₦{Number(req.maxBudget).toLocaleString()}
+                </div>
 
-              <div className="col-span-3">
-                {getStatusBadge(req.status)}
-              </div>
+                <div className="col-span-3">
+                  {getStatusBadge(req.status)}
+                </div>
 
-              <div className="col-span-2 flex justify-start md:justify-end">
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => onSelectRequest(req.publicToken)}
-                  className="h-9 px-3.5"
-                >
-                  <span>View Offers</span>
-                  <ChevronRightIcon className="w-3.5 h-3.5 ml-1" />
-                </Button>
+                <div className="col-span-2 flex justify-end">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => onSelectRequest(req.publicToken)}
+                    className="h-9 px-3.5"
+                  >
+                    <span>View Offers</span>
+                    <ChevronRightIcon className="w-3.5 h-3.5 ml-1" />
+                  </Button>
+                </div>
               </div>
-            </div>
+            </React.Fragment>
           ))}
         </div>
       )}

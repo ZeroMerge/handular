@@ -45,6 +45,11 @@ export function App() {
         setAuthToken(storedToken);
         setCurrentUser(JSON.parse(storedUser));
 
+        const storedChatId = localStorage.getItem('handular_active_chat');
+        if (storedChatId) {
+          setActiveChatId(storedChatId);
+        }
+
         // Revalidate session with backend
         fetch(`${API_BASE_URL}/api/v1/auth/me`, {
           headers: { Authorization: `Bearer ${storedToken}` },
@@ -120,6 +125,7 @@ export function App() {
     try {
       localStorage.removeItem('handular_user');
       localStorage.removeItem('handular_token');
+      localStorage.removeItem('handular_active_chat');
     } catch (err) {
       console.warn('Failed to clear session:', err);
     }
@@ -149,11 +155,17 @@ export function App() {
 
   const handleSelectChat = (chatId: string) => {
     setActiveChatId(chatId);
+    try {
+      localStorage.setItem('handular_active_chat', chatId);
+    } catch {}
     setView('wizard');
   };
 
   const handleNewChat = () => {
     setActiveChatId(null);
+    try {
+      localStorage.removeItem('handular_active_chat');
+    } catch {}
     setView('wizard');
   };
 
@@ -168,6 +180,9 @@ export function App() {
         setChats((prev) => prev.filter((c) => c.id !== chatId));
         if (activeChatId === chatId) {
           setActiveChatId(null);
+          try {
+            localStorage.removeItem('handular_active_chat');
+          } catch {}
         }
       }
     } catch (err) {
@@ -279,6 +294,9 @@ export function App() {
             activeChatId={activeChatId}
             onChatSessionCreated={(id) => {
               setActiveChatId(id);
+              try {
+                localStorage.setItem('handular_active_chat', id);
+              } catch {}
               fetchChats();
             }}
           />

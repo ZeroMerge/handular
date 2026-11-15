@@ -50,13 +50,6 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
   const [offers, setOffers] = useState<OfferData[]>([]);
   const [isRefreshingOffers, setIsRefreshingOffers] = useState(false);
 
-  // Chat animation state
-  const [isBotTyping, setIsBotTyping] = useState(false);
-  const [messages, setMessages] = useState<ChatMsg[]>([]);
-
-  const chatContainerRef = useRef<HTMLDivElement>(null);
-  const isInitialLoadRef = useRef(true);
-
   const getFormatTime = () => {
     const now = new Date();
     return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -70,33 +63,52 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
     return `${timeGreeting}, ${name}! It's a good time to find a great device today.`;
   };
 
-  // Scroll management: Keep top greeting visible initially; scroll to bottom only as chat grows or on history load
+  const createInitialMessages = (name: string): ChatMsg[] => [
+    {
+      id: 'msg-greeting',
+      sender: 'bot',
+      text: getGreetingText(name),
+      timestamp: getFormatTime(),
+    },
+    {
+      id: 'msg-category-prompt',
+      sender: 'bot',
+      text: 'What kind of device are you looking for? Pick an option below.',
+      timestamp: getFormatTime(),
+    },
+  ];
+
+  // Chat animation state
+  const [isBotTyping, setIsBotTyping] = useState(false);
+  const [messages, setMessages] = useState<ChatMsg[]>(() => createInitialMessages(firstName));
+
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Scroll management:
+  // - If chat is short (content <= container height), pin at top (scrollTop = 0)
+  // - If chat is long (> container height), refresh shows top then smoothly scrolls straight down to bottom
   useEffect(() => {
     const el = chatContainerRef.current;
     if (!el) return;
 
-    // Reset window scroll to 0,0 so body never scrolls
     window.scrollTo(0, 0);
 
-    // If chat is fresh and short (<= 2 messages, e.g. initial greeting + prompt), keep top message 100% visible
-    const isShortChat = !activeChatId && messages.length <= 2;
-    const hasOverflow = el.scrollHeight > el.clientHeight + 10;
-
-    if (isShortChat || !hasOverflow) {
+    // If chat content fits comfortably inside the container, keep top visible
+    if (el.scrollHeight <= el.clientHeight + 10) {
       el.scrollTop = 0;
       return;
     }
 
-    // When chat length has grown or when an existing chat with history is loaded/refreshed, scroll container to bottom
+    // If chat content overflows (long conversation):
+    // Refresh shows top of the chat, then smoothly scrolls straight down to bottom
     const timer = setTimeout(() => {
       if (chatContainerRef.current) {
         chatContainerRef.current.scrollTo({
           top: chatContainerRef.current.scrollHeight,
-          behavior: isInitialLoadRef.current ? 'auto' : 'smooth',
+          behavior: 'smooth',
         });
-        isInitialLoadRef.current = false;
       }
-    }, 60);
+    }, 120);
 
     return () => clearTimeout(timer);
   }, [messages, isBotTyping, currentStep, activeChatId]);
@@ -134,40 +146,10 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
       };
     }
 
-    // New conversation alive typing sequence
-    setMessages([]);
-    setIsBotTyping(true);
-
-    const timer1 = setTimeout(() => {
-      if (isCancelled) return;
-      const greetingMsg: ChatMsg = {
-        id: 'msg-greeting',
-        sender: 'bot',
-        text: getGreetingText(firstName),
-        timestamp: getFormatTime(),
-      };
-      setMessages([greetingMsg]);
-      setIsBotTyping(true);
-
-      const timer2 = setTimeout(() => {
-        if (isCancelled) return;
-        const promptMsg: ChatMsg = {
-          id: 'msg-category-prompt',
-          sender: 'bot',
-          text: 'What kind of device are you looking for? Pick an option below.',
-          timestamp: getFormatTime(),
-        };
-        setMessages((prev) => [...prev, promptMsg]);
-        setIsBotTyping(false);
-      }, 550);
-
-      return () => clearTimeout(timer2);
-    }, 450);
-
-    return () => {
-      isCancelled = true;
-      clearTimeout(timer1);
-    };
+    // Fresh new chat: initialize with greeting and prompt immediately
+    setMessages(createInitialMessages(firstName));
+    setCurrentStep('category');
+    setIsBotTyping(false);
   }, [activeChatId, firstName, apiBaseUrl]);
 
   // Sync messages to backend chat session if active
@@ -429,7 +411,7 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-col h-[calc(100dvh-4rem)]">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-2.5 sm:py-4 flex flex-col h-[calc(100dvh-8rem)] md:h-[calc(100dvh-4rem)]">
       {/* Conversation Thread - Pure Clean Chat Flow (NO Banners, NO Start Over) */}
       <div
         ref={chatContainerRef}

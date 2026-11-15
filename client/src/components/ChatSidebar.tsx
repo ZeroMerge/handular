@@ -77,13 +77,18 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                         onSelectChat(c.id);
                         onClose();
                       }}
-                      className={`group flex items-center justify-between px-3 py-2 rounded-[8px] cursor-pointer text-xs font-normal transition-all ${
+                      className={`group flex items-center justify-between px-3 py-2 rounded-[8px] cursor-pointer text-xs transition-all ${
                         isActive
-                          ? 'bg-[#10393b] text-white'
-                          : 'hover:bg-[#eceae2] text-[#10393b]'
+                          ? 'bg-[#10393b]/10 text-[#10393b] font-medium'
+                          : 'hover:bg-[#eceae2] text-[#10393b]/80 font-normal'
                       }`}
                     >
-                      <span className="truncate flex-1 pr-2">{c.title}</span>
+                      <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
+                        {isActive && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
+                        )}
+                        <span className="truncate flex-1">{c.title}</span>
+                      </div>
 
                       {!c.isLocked && c.status === 'DRAFT' && (
                         <button
@@ -92,11 +97,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                             onDeleteChat(c.id);
                           }}
                           title="Delete draft"
-                          className={`opacity-0 group-hover:opacity-100 p-1 rounded-[4px] transition-all ${
-                            isActive
-                              ? 'hover:bg-white/20 text-white/80'
-                              : 'hover:bg-red-50 text-red-500'
-                          }`}
+                          className="opacity-0 group-hover:opacity-100 p-1 rounded-[4px] hover:bg-red-50 text-red-500 transition-all shrink-0"
                         >
                           <TrashIcon className="w-3.5 h-3.5" />
                         </button>
@@ -173,13 +174,18 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                       onSelectChat(c.id);
                       onClose();
                     }}
-                    className={`group flex items-center justify-between px-3 py-2.5 rounded-[10px] cursor-pointer text-xs font-normal transition-all ${
+                    className={`group flex items-center justify-between px-3 py-2.5 rounded-[10px] cursor-pointer text-xs transition-all ${
                       isActive
-                        ? 'bg-[#10393b] text-white'
-                        : 'hover:bg-[#eceae2] text-[#10393b]'
+                        ? 'bg-[#10393b]/10 text-[#10393b] font-medium'
+                        : 'hover:bg-[#eceae2] text-[#10393b]/80 font-normal'
                     }`}
                   >
-                    <span className="truncate flex-1 pr-2">{c.title}</span>
+                    <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
+                      {isActive && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
+                      )}
+                      <span className="truncate flex-1">{c.title}</span>
+                    </div>
 
                     {!c.isLocked && c.status === 'DRAFT' && (
                       <button
@@ -188,11 +194,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                           onDeleteChat(c.id);
                         }}
                         title="Delete draft"
-                        className={`p-1 rounded-[4px] transition-all ${
-                          isActive
-                            ? 'hover:bg-white/20 text-white/80'
-                            : 'hover:bg-red-50 text-red-500'
-                        }`}
+                        className="p-1 rounded-[4px] hover:bg-red-50 text-red-500 transition-all shrink-0"
                       >
                         <TrashIcon className="w-3.5 h-3.5" />
                       </button>

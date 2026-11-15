@@ -24,6 +24,82 @@ interface ChatMsg {
   status?: 'sending' | 'delivered';
 }
 
+interface DraftChatData {
+  chatId?: string | null;
+  category: 'LAPTOPS' | 'PHONES' | 'ACCESSORIES';
+  brand: string;
+  useCase: string;
+  maxBudget: number;
+  selectedSpecs: string[];
+  customNotes: string;
+  currentStep: Step;
+  messages: ChatMsg[];
+}
+
+function inferWizardStateFromMessages(msgs: ChatMsg[]) {
+  const userMsgs = msgs.filter((m) => m.sender === 'user');
+  let category: 'LAPTOPS' | 'PHONES' | 'ACCESSORIES' = 'LAPTOPS';
+  let brand = 'Apple MacBook';
+  let useCase = 'Coding & Tech';
+  let maxBudget = 400000;
+  let selectedSpecs: string[] = [];
+  let customNotes = '';
+  let inferredStep: Step = 'category';
+
+  if (userMsgs.length >= 1) {
+    const text0 = userMsgs[0].text.toUpperCase();
+    if (text0.includes('PHONE')) {
+      category = 'PHONES';
+      brand = 'Apple iPhone';
+    } else if (text0.includes('ACCESSOR')) {
+      category = 'ACCESSORIES';
+      brand = 'AirPods';
+    } else {
+      category = 'LAPTOPS';
+      brand = 'Apple MacBook';
+    }
+    inferredStep = 'brand';
+  }
+
+  if (userMsgs.length >= 2) {
+    brand = userMsgs[1].text;
+    inferredStep = 'use_case';
+  }
+
+  if (userMsgs.length >= 3) {
+    useCase = userMsgs[2].text;
+    inferredStep = 'budget';
+  }
+
+  if (userMsgs.length >= 4) {
+    const rawBudget = userMsgs[3].text.replace(/[^0-9]/g, '');
+    const parsed = parseInt(rawBudget, 10);
+    if (!isNaN(parsed) && parsed > 0) {
+      maxBudget = parsed;
+    }
+    inferredStep = 'specs';
+  }
+
+  if (userMsgs.length >= 5) {
+    const specsMsg = userMsgs[4].text;
+    if (specsMsg && specsMsg !== 'Standard clean condition') {
+      const parts = specsMsg.split(',').map((s) => s.trim()).filter(Boolean);
+      selectedSpecs = parts;
+    }
+    inferredStep = 'summary';
+  }
+
+  return {
+    category,
+    brand,
+    useCase,
+    maxBudget,
+    selectedSpecs,
+    customNotes,
+    inferredStep,
+  };
+}
+
 export const RequestWizard: React.FC<RequestWizardProps> = ({
   apiBaseUrl,
   onRequestSubmitted,
@@ -83,6 +159,30 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
   const [messages, setMessages] = useState<ChatMsg[]>(() => createInitialMessages(firstName));
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const isCreatingChatRef = useRef(false);
+  const activeChatIdRef = useRef<string | null>(activeChatId);
+
+  useEffect(() => {
+    activeChatIdRef.current = activeChatId;
+  }, [activeChatId]);
+
+  // Helper to persist draft chat state in localStorage
+  const persistDraft = (overrides?: Partial<DraftChatData>) => {
+    try {
+      const data: DraftChatData = {
+        chatId: activeChatIdRef.current,
+        category: overrides?.category ?? category,
+        brand: overrides?.brand ?? brand,
+        useCase: overrides?.useCase ?? useCase,
+        maxBudget: overrides?.maxBudget ?? maxBudget,
+        selectedSpecs: overrides?.selectedSpecs ?? selectedSpecs,
+        customNotes: overrides?.customNotes ?? customNotes,
+        currentStep: overrides?.currentStep ?? currentStep,
+        messages: overrides?.messages ?? messages,
+      };
+      localStorage.setItem('handular_draft_chat', JSON.stringify(data));
+    } catch {}
+  };
 
   // Scroll management:
   // - If chat is short (content <= container height), pin at top (scrollTop = 0)
@@ -113,7 +213,7 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
     return () => clearTimeout(timer);
   }, [messages, isBotTyping, currentStep, activeChatId]);
 
-  // Load active chat or initialize alive sequence
+  // Load active chat or restore local draft
   useEffect(() => {
     let isCancelled = false;
 
@@ -136,7 +236,15 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
               setOffers(chat.buyerRequest.offers || []);
               setCurrentStep('completed');
             } else {
-              setCurrentStep('category');
+              // Mid-flow draft: restore wizard step and form choices from messages
+              const inferred = inferWizardStateFromMessages(chat.messages);
+              setCategory(inferred.category);
+              setBrand(inferred.brand);
+              setUseCase(inferred.useCase);
+              setMaxBudget(inferred.maxBudget);
+              setSelectedSpecs(inferred.selectedSpecs);
+              setCustomNotes(inferred.customNotes);
+              setCurrentStep(inferred.inferredStep);
             }
           }
         })
@@ -146,26 +254,116 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
       };
     }
 
+    // No activeChatId: check if there is an unauthenticated local draft
+    try {
+      const draftRaw = localStorage.getItem('handular_draft_chat');
+      if (draftRaw) {
+        const draft: DraftChatData = JSON.parse(draftRaw);
+        if (draft.messages && draft.messages.length > 2) {
+          setMessages(draft.messages);
+          if (draft.category) setCategory(draft.category);
+          if (draft.brand) setBrand(draft.brand);
+          if (draft.useCase) setUseCase(draft.useCase);
+          if (draft.maxBudget) setMaxBudget(draft.maxBudget);
+          if (draft.selectedSpecs) setSelectedSpecs(draft.selectedSpecs);
+          if (draft.customNotes) setCustomNotes(draft.customNotes);
+          if (draft.currentStep) setCurrentStep(draft.currentStep);
+          setIsBotTyping(false);
+          return;
+        }
+      }
+    } catch {}
+
     // Fresh new chat: initialize with greeting and prompt immediately
     setMessages(createInitialMessages(firstName));
     setCurrentStep('category');
     setIsBotTyping(false);
   }, [activeChatId, firstName, apiBaseUrl]);
 
-  // Sync messages to backend chat session if active
-  const syncChatMessages = (updatedMessages: ChatMsg[], updatedTitle?: string) => {
-    if (!activeChatId) return;
-    fetch(`${apiBaseUrl}/api/v1/chats/${activeChatId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('handular_token') || ''}`,
-      },
-      body: JSON.stringify({
-        messages: updatedMessages,
-        title: updatedTitle,
-      }),
-    }).catch(() => {});
+  // Sync messages to backend chat session and update local draft
+  const syncChatMessages = async (
+    updatedMessages: ChatMsg[],
+    targetStep: Step,
+    overrideState?: Partial<DraftChatData>,
+    updatedTitle?: string
+  ) => {
+    const curCategory = overrideState?.category ?? category;
+    const curBrand = overrideState?.brand ?? brand;
+    const curUseCase = overrideState?.useCase ?? useCase;
+    const curMaxBudget = overrideState?.maxBudget ?? maxBudget;
+    const curSpecs = overrideState?.selectedSpecs ?? selectedSpecs;
+    const curNotes = overrideState?.customNotes ?? customNotes;
+
+    persistDraft({
+      category: curCategory,
+      brand: curBrand,
+      useCase: curUseCase,
+      maxBudget: curMaxBudget,
+      selectedSpecs: curSpecs,
+      customNotes: curNotes,
+      currentStep: targetStep,
+      messages: updatedMessages,
+    });
+
+    const title =
+      updatedTitle ||
+      (curBrand && curBrand !== 'any'
+        ? `${curBrand} (${curUseCase || 'Request'})`
+        : `${curCategory} Request`);
+
+    const token = localStorage.getItem('handular_token');
+    if (!token) return;
+
+    if (activeChatIdRef.current) {
+      fetch(`${apiBaseUrl}/api/v1/chats/${activeChatIdRef.current}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          messages: updatedMessages,
+          title,
+        }),
+      }).catch(() => {});
+    } else if (!isCreatingChatRef.current && updatedMessages.length > 2) {
+      isCreatingChatRef.current = true;
+      try {
+        const res = await fetch(`${apiBaseUrl}/api/v1/chats`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            title,
+            messages: updatedMessages,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok && data?.chat?.id) {
+          activeChatIdRef.current = data.chat.id;
+          if (onChatSessionCreated) {
+            onChatSessionCreated(data.chat.id);
+          }
+          persistDraft({
+            chatId: data.chat.id,
+            category: curCategory,
+            brand: curBrand,
+            useCase: curUseCase,
+            maxBudget: curMaxBudget,
+            selectedSpecs: curSpecs,
+            customNotes: curNotes,
+            currentStep: targetStep,
+            messages: updatedMessages,
+          });
+        }
+      } catch {
+        // Retry next time
+      } finally {
+        isCreatingChatRef.current = false;
+      }
+    }
   };
 
   // Generic transition handler with WhatsApp-style delivery ticks & 3-dot typing bubble
@@ -173,7 +371,8 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
     userText: string,
     botReplyText: string,
     nextStep: Step,
-    extraAction?: () => void
+    extraAction?: () => void,
+    overrideState?: Partial<DraftChatData>
   ) => {
     const time = getFormatTime();
     const userMsgId = `user-${Date.now()}`;
@@ -187,7 +386,11 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
       status: 'sending',
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages((prev) => {
+      const intermediate = [...prev, userMsg];
+      syncChatMessages(intermediate, nextStep, overrideState);
+      return intermediate;
+    });
 
     // 2. Transition to 'delivered' tick after 200ms
     setTimeout(() => {
@@ -209,7 +412,7 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
         };
         setMessages((prev) => {
           const nextMsgs = [...prev, botMsg];
-          syncChatMessages(nextMsgs);
+          syncChatMessages(nextMsgs, nextStep, overrideState);
           return nextMsgs;
         });
         setCurrentStep(nextStep);
@@ -219,15 +422,17 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
 
   // STEP 1: Select Category
   const handleSelectCategory = (cat: 'LAPTOPS' | 'PHONES' | 'ACCESSORIES', label: string) => {
+    const chosenBrand =
+      cat === 'LAPTOPS' ? 'Apple MacBook' : cat === 'PHONES' ? 'Apple iPhone' : 'AirPods';
     setCategory(cat);
-    if (cat === 'LAPTOPS') setBrand('Apple MacBook');
-    else if (cat === 'PHONES') setBrand('Apple iPhone');
-    else setBrand('AirPods');
+    setBrand(chosenBrand);
 
     handleUserChoice(
       label,
       `Great! Which brand are you interested in? Pick an option below.`,
-      'brand'
+      'brand',
+      undefined,
+      { category: cat, brand: chosenBrand }
     );
   };
 
@@ -237,7 +442,9 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
     handleUserChoice(
       chosenBrand,
       `Got it, ${chosenBrand}! What will you mainly use it for?`,
-      'use_case'
+      'use_case',
+      undefined,
+      { brand: chosenBrand }
     );
   };
 
@@ -247,7 +454,9 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
     handleUserChoice(
       purpose,
       `What is your maximum budget for this device? Tap a preset or type an amount below.`,
-      'budget'
+      'budget',
+      undefined,
+      { useCase: purpose }
     );
   };
 
@@ -258,7 +467,9 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
     handleUserChoice(
       label,
       `Any specific requirements or specs? Tap any that matter to you, or type extra details below.`,
-      'specs'
+      'specs',
+      undefined,
+      { maxBudget: amount }
     );
   };
 
@@ -284,15 +495,19 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
     handleUserChoice(
       `₦${cleanNum.toLocaleString()}`,
       `Any specific requirements or specs? Tap any that matter to you, or type extra details below.`,
-      'specs'
+      'specs',
+      undefined,
+      { maxBudget: cleanNum }
     );
   };
 
   // STEP 5: Specs Selection & Notes
   const toggleSpec = (spec: string) => {
-    setSelectedSpecs((prev) =>
-      prev.includes(spec) ? prev.filter((s) => s !== spec) : [...prev, spec]
-    );
+    setSelectedSpecs((prev) => {
+      const updated = prev.includes(spec) ? prev.filter((s) => s !== spec) : [...prev, spec];
+      persistDraft({ selectedSpecs: updated });
+      return updated;
+    });
   };
 
   const handleFinishSpecs = () => {
@@ -306,7 +521,9 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
     handleUserChoice(
       specsSummaryText,
       `Here is a quick summary of your request. Tap below to find available devices across verified campus sellers.`,
-      'summary'
+      'summary',
+      undefined,
+      { selectedSpecs, customNotes }
     );
   };
 
@@ -326,7 +543,7 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
       maxBudget,
       preferredSpecs: [...selectedSpecs, customNotes].filter(Boolean).join(', '),
       studentId: currentUser?.id,
-      chatSessionId: activeChatId || undefined,
+      chatSessionId: activeChatIdRef.current || undefined,
     };
 
     try {
@@ -350,8 +567,41 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
       setTrackingCode(code);
       setCurrentStep('completed');
 
-      // Create new chat session if not present
-      if (!activeChatId && onChatSessionCreated) {
+      // Clear draft since request is now officially submitted
+      try {
+        localStorage.removeItem('handular_draft_chat');
+      } catch {}
+
+      // Add success confirmation message in chat and sync
+      const confirmedMsg: ChatMsg = {
+        id: `bot-confirmed-${Date.now()}`,
+        sender: 'bot',
+        text: `Your request is live with tracking code ${code}. Verified campus sellers have been notified and will upload matching devices right here!`,
+        timestamp: getFormatTime(),
+      };
+
+      setMessages((prev) => {
+        const nextMsgs = [...prev, confirmedMsg];
+        const token = localStorage.getItem('handular_token');
+        if (token && activeChatIdRef.current) {
+          fetch(`${apiBaseUrl}/api/v1/chats/${activeChatIdRef.current}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              messages: nextMsgs,
+              trackingCode: code,
+              title: `${brand} (${useCase})`,
+            }),
+          }).catch(() => {});
+        }
+        return nextMsgs;
+      });
+
+      // Create new chat session if not present yet
+      if (!activeChatIdRef.current && onChatSessionCreated) {
         fetch(`${apiBaseUrl}/api/v1/chats`, {
           method: 'POST',
           headers: {
@@ -360,26 +610,18 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
           },
           body: JSON.stringify({
             title: `${brand} (${useCase})`,
-            messages,
+            messages: [...messages, confirmedMsg],
           }),
         })
           .then((r) => r.json())
           .then((d) => {
-            if (d.chat?.id) onChatSessionCreated(d.chat.id);
+            if (d.chat?.id) {
+              activeChatIdRef.current = d.chat.id;
+              onChatSessionCreated(d.chat.id);
+            }
           })
           .catch(() => {});
       }
-
-      // Add success confirmation message in chat
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `bot-confirmed-${Date.now()}`,
-          sender: 'bot',
-          text: `Your request is live with tracking code ${code}. Verified campus sellers have been notified and will upload matching devices right here!`,
-          timestamp: getFormatTime(),
-        },
-      ]);
 
       // Fetch offers
       fetchOffers(generatedToken);

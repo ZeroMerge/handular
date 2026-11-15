@@ -103,6 +103,36 @@ export function App() {
     try {
       localStorage.setItem('handular_user', JSON.stringify(user));
       localStorage.setItem('handular_token', token);
+
+      // Restore and sync draft chat if one was started before signing in
+      const draftRaw = localStorage.getItem('handular_draft_chat');
+      if (draftRaw) {
+        const draft = JSON.parse(draftRaw);
+        if (draft.messages && draft.messages.length > 2 && !draft.chatId) {
+          fetch(`${API_BASE_URL}/api/v1/chats`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              title: `${draft.brand || draft.category || 'New Sourcing'} Request`,
+              messages: draft.messages,
+            }),
+          })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+              if (data?.chat?.id) {
+                setActiveChatId(data.chat.id);
+                try {
+                  localStorage.setItem('handular_active_chat', data.chat.id);
+                } catch {}
+                fetchChats();
+              }
+            })
+            .catch(() => {});
+        }
+      }
     } catch (err) {
       console.warn('Failed to save session to localStorage:', err);
     }
@@ -165,6 +195,7 @@ export function App() {
     setActiveChatId(null);
     try {
       localStorage.removeItem('handular_active_chat');
+      localStorage.removeItem('handular_draft_chat');
     } catch {}
     setView('wizard');
   };

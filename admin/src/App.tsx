@@ -10,7 +10,6 @@ import {
   CheckCircleIcon,
   ArrowRightIcon,
   ShieldCheckIcon,
-  MagnifyingGlassIcon,
   DevicePhoneMobileIcon,
   ArrowRightOnRectangleIcon,
   XMarkIcon,
@@ -226,36 +225,26 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-[#f5f4ef] flex font-sans text-[#10393b] selection:bg-[#10393b] selection:text-white">
-      {/* Sidebar - ZERO BORDERS, ZERO SHADOWS, TRANSLUCENT SQUIRCLES */}
-      <aside className="w-64 bg-white flex flex-col justify-between hidden md:flex shrink-0">
+      {/* Sidebar - CLEAN, MINIMALIST, ZERO BORDERS, ZERO SHADOWS */}
+      <aside className="w-60 bg-white flex flex-col justify-between hidden md:flex shrink-0">
         <div>
-          {/* Top Brand Bar - Centered Standalone Logo, Max Width */}
-          <div className="h-16 px-5 flex items-center justify-center bg-[#eceae2]">
+          {/* Top Brand Bar - Clean without contrasting background block */}
+          <div className="h-16 px-5 flex items-center gap-3">
             <img
               src="/handular_icon.png"
               alt="Handular"
-              className="w-10 h-10 max-w-[40px] rounded-[10px] object-contain"
+              className="w-8 h-8 max-w-[32px] rounded-[6px] object-contain"
             />
+            <span className="text-sm font-medium tracking-tight text-[#10393b]">
+              Handular Ops
+            </span>
           </div>
 
-          {/* Search Bar */}
-          <div className="p-3">
-            <div className="h-9 px-3 rounded-[10px] bg-[#eceae2] flex items-center justify-between text-xs text-[#777777]">
-              <div className="flex items-center gap-2">
-                <MagnifyingGlassIcon className="w-3.5 h-3.5 text-[#777777]" />
-                <span className="font-normal">Quick search...</span>
-              </div>
-              <kbd className="text-[10px] bg-white px-1.5 py-0.5 rounded-[5px] text-[#555555] font-mono">
-                ⌘K
-              </kbd>
-            </div>
-          </div>
-
-          {/* Navigation Links - ZERO BORDERS, ZERO SHADOWS, FADED ASH ACTIVE STATE */}
-          <nav className="px-3 space-y-1">
+          {/* Navigation Links - ZERO BORDERS, ZERO SHADOWS, 6PX SQUIRCLE */}
+          <nav className="px-3 pt-2 space-y-1">
             <button
               onClick={() => setCurrentTab('dashboard')}
-              className={`w-full h-10 px-3 rounded-[10px] text-xs flex items-center justify-between transition-all cursor-pointer ${
+              className={`w-full h-9 px-3 rounded-[6px] text-xs flex items-center justify-between transition-all cursor-pointer ${
                 currentTab === 'dashboard'
                   ? 'bg-black/10 text-[#0f2d2e] font-medium'
                   : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
@@ -272,7 +261,7 @@ export function App() {
 
             <button
               onClick={() => setCurrentTab('reviews')}
-              className={`w-full h-10 px-3 rounded-[10px] text-xs flex items-center justify-between transition-all cursor-pointer ${
+              className={`w-full h-9 px-3 rounded-[6px] text-xs flex items-center justify-between transition-all cursor-pointer ${
                 currentTab === 'reviews'
                   ? 'bg-black/10 text-[#0f2d2e] font-medium'
                   : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
@@ -284,7 +273,7 @@ export function App() {
               </div>
               <div className="flex items-center gap-1.5">
                 {reviews.length > 0 && (
-                  <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-normal bg-[#ffad24]/20 text-[#ffad24]">
+                  <span className="px-1.5 py-0.5 rounded-[3px] text-[10px] font-normal bg-[#ffad24]/20 text-[#ffad24]">
                     {reviews.length}
                   </span>
                 )}
@@ -296,7 +285,7 @@ export function App() {
 
             <button
               onClick={() => setCurrentTab('requests')}
-              className={`w-full h-10 px-3 rounded-[10px] text-xs flex items-center justify-between transition-all cursor-pointer ${
+              className={`w-full h-9 px-3 rounded-[6px] text-xs flex items-center justify-between transition-all cursor-pointer ${
                 currentTab === 'requests'
                   ? 'bg-black/10 text-[#0f2d2e] font-medium'
                   : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
@@ -318,7 +307,7 @@ export function App() {
 
             <button
               onClick={() => setCurrentTab('sellers')}
-              className={`w-full h-10 px-3 rounded-[10px] text-xs flex items-center justify-between transition-all cursor-pointer ${
+              className={`w-full h-9 px-3 rounded-[6px] text-xs flex items-center justify-between transition-all cursor-pointer ${
                 currentTab === 'sellers'
                   ? 'bg-black/10 text-[#0f2d2e] font-medium'
                   : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
@@ -340,7 +329,7 @@ export function App() {
 
             <button
               onClick={() => setCurrentTab('deals')}
-              className={`w-full h-10 px-3 rounded-[10px] text-xs flex items-center justify-between transition-all cursor-pointer ${
+              className={`w-full h-9 px-3 rounded-[6px] text-xs flex items-center justify-between transition-all cursor-pointer ${
                 currentTab === 'deals'
                   ? 'bg-black/10 text-[#0f2d2e] font-medium'
                   : 'text-[#10393b]/70 hover:bg-[#eceae2] hover:text-[#10393b] font-normal'
@@ -357,43 +346,37 @@ export function App() {
           </nav>
         </div>
 
-        {/* Sidebar Footer with Sign Out */}
-        <div className="p-4 bg-[#f5f4ef] text-[11px] text-[#666666] space-y-2">
+        {/* Clean Sidebar Footer */}
+        <div className="p-4 text-[11px] text-[#888888]">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 font-normal text-[#10393b]">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Fastify API (:4001)</span>
-            </div>
+            <span className="truncate max-w-[130px] font-normal text-[#666666]">
+              {adminUser.email}
+            </span>
             <button
               onClick={handleSignOut}
-              className="text-red-600 hover:text-red-700 font-normal flex items-center gap-1 cursor-pointer"
+              className="text-[#888888] hover:text-red-600 font-normal flex items-center gap-1 cursor-pointer transition-colors"
               title="Sign Out"
             >
               <ArrowRightOnRectangleIcon className="w-3.5 h-3.5" />
               <span>Exit</span>
             </button>
           </div>
-          <div className="text-[#888888] font-mono text-[10px]">Staff: {adminUser.email}</div>
         </div>
       </aside>
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Header - ZERO BORDERS, ZERO SHADOWS, TRANSLUCENT BACKDROP */}
+        {/* Top Header - CLEAN, NO SUBHEADING, ZERO BORDERS, ZERO SHADOWS */}
         <header className="h-16 bg-white/95 backdrop-blur-md px-4 sm:px-8 flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-3">
             {/* Mobile Brand Logo */}
             <img
               src="/handular_icon.png"
               alt="Handular"
-              className="w-8 h-8 rounded-[8px] object-contain md:hidden"
+              className="w-8 h-8 rounded-[4px] object-contain md:hidden"
             />
             <span className="text-base sm:text-lg font-normal text-[#10393b] capitalize">
               {currentTab === 'dashboard' ? 'Command Center' : currentTab}
-            </span>
-            <span className="text-xs text-[#aaaaaa] hidden sm:inline">•</span>
-            <span className="text-xs text-[#666666] hidden sm:inline font-normal">
-              Campus Sourcing Automation & AI Verification
             </span>
           </div>
 
@@ -435,7 +418,7 @@ export function App() {
             {/* Mobile Exit Button */}
             <button
               onClick={handleSignOut}
-              className="md:hidden p-2 rounded-[8px] text-[#888888] hover:text-red-600 transition-colors"
+              className="md:hidden p-2 rounded-[4px] text-[#888888] hover:text-red-600 transition-colors"
               title="Sign Out"
             >
               <ArrowRightOnRectangleIcon className="w-4 h-4" />
@@ -461,21 +444,18 @@ export function App() {
           {/* TAB 1: COMMAND CENTER / DASHBOARD */}
           {currentTab === 'dashboard' && (
             <div key="dashboard" className="space-y-6 animate-chat-morph">
-              {/* KPI Cards - ZERO BORDERS, ZERO SHADOWS */}
+              {/* KPI Cards - ZERO BORDERS, ZERO SHADOWS, 10PX CURVE */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white rounded-[18px] p-5">
+                <div className="bg-white rounded-[10px] p-5">
                   <span className="block text-xs font-normal text-[#888888] uppercase tracking-wider mb-1">
                     Active Requests
                   </span>
                   <span className="text-3xl font-normal text-[#10393b] font-mono">
                     {metrics ? metrics.activeRequests : requests.length}
                   </span>
-                  <span className="block text-[11px] text-[#666666] mt-1 font-normal">
-                    Dispatched across campus sellers
-                  </span>
                 </div>
 
-                <div className="bg-white rounded-[18px] p-5">
+                <div className="bg-white rounded-[10px] p-5">
                   <span className="block text-xs font-normal text-[#888888] uppercase tracking-wider mb-1">
                     Pending AI Reviews
                   </span>
@@ -484,43 +464,34 @@ export function App() {
                       {reviews.length}
                     </span>
                     {reviews.length > 0 && (
-                      <span className="text-xs text-[#ffad24] bg-[#ffad24]/10 px-2 py-0.5 rounded-[6px] font-normal">
+                      <span className="text-xs text-[#ffad24] bg-[#ffad24]/10 px-1.5 py-0.5 rounded-[3px] font-normal">
                         Action Required
                       </span>
                     )}
                   </div>
-                  <span className="block text-[11px] text-[#666666] mt-1 font-normal">
-                    Multimodal offers needing inspection
-                  </span>
                 </div>
 
-                <div className="bg-white rounded-[18px] p-5">
+                <div className="bg-white rounded-[10px] p-5">
                   <span className="block text-xs font-normal text-[#888888] uppercase tracking-wider mb-1">
                     Verified Vendors
                   </span>
                   <span className="text-3xl font-normal text-[#10393b] font-mono">
                     {sellers.length}
                   </span>
-                  <span className="block text-[11px] text-[#666666] mt-1 font-normal">
-                    WhatsApp & Telegram connected
-                  </span>
                 </div>
 
-                <div className="bg-white rounded-[18px] p-5">
+                <div className="bg-white rounded-[10px] p-5">
                   <span className="block text-xs font-normal text-[#888888] uppercase tracking-wider mb-1">
                     Sourced Volume
                   </span>
                   <span className="text-3xl font-normal text-emerald-600 font-mono">
                     ₦{metrics ? Number(metrics.totalVolume).toLocaleString() : '0'}
                   </span>
-                  <span className="block text-[11px] text-[#666666] mt-1 font-normal">
-                    Commissions: ₦{metrics ? Number(metrics.totalCommissions).toLocaleString() : '0'}
-                  </span>
                 </div>
               </div>
 
               {/* Recent Requests Section */}
-              <div className="bg-white rounded-[18px] p-6">
+              <div className="bg-white rounded-[10px] p-6">
                 <div className="flex items-center justify-between mb-5">
                   <h3 className="text-sm font-normal text-[#10393b]">
                     Recent Buyer Requests
@@ -538,9 +509,9 @@ export function App() {
                   {isRefreshing && requests.length === 0 ? (
                     <div className="space-y-2.5">
                       {[1, 2, 3].map((i) => (
-                        <div key={i} className="p-4 rounded-[10px] bg-[#eceae2] animate-pulse space-y-2">
-                          <div className="h-4 bg-[#e0ded6] rounded-[6px] w-1/4" />
-                          <div className="h-3 bg-[#e0ded6] rounded-[6px] w-1/2" />
+                        <div key={i} className="p-4 rounded-[6px] bg-[#eceae2] animate-pulse space-y-2">
+                          <div className="h-4 bg-[#e0ded6] rounded-[3px] w-1/4" />
+                          <div className="h-3 bg-[#e0ded6] rounded-[3px] w-1/2" />
                         </div>
                       ))}
                     </div>
@@ -548,12 +519,12 @@ export function App() {
                     requests.slice(0, 5).map((req) => (
                       <div
                         key={req.id}
-                        className="p-4 rounded-[10px] bg-[#eceae2] hover:bg-[#e4e1d7] transition-all"
+                        className="p-4 rounded-[6px] bg-[#eceae2] hover:bg-[#e4e1d7] transition-all"
                       >
                         {/* Responsive 2-Row Clean Layout */}
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-10 h-10 rounded-[10px] bg-white flex items-center justify-center text-sm font-normal text-[#10393b] shrink-0">
+                            <div className="w-9 h-9 rounded-[6px] bg-white flex items-center justify-center text-sm font-normal text-[#10393b] shrink-0">
                               {req.category === 'LAPTOPS' ? '💻' : '📱'}
                             </div>
                             <div className="min-w-0 flex-1">
@@ -564,7 +535,7 @@ export function App() {
                                 <span className="text-xs text-[#333333] font-normal truncate">
                                   {req.buyerName}
                                 </span>
-                                <span className="text-[10px] px-2 py-0.5 rounded-[6px] bg-white text-[#555555] font-normal">
+                                <span className="text-[10px] px-2 py-0.5 rounded-[3px] bg-white text-[#555555] font-normal">
                                   Max ₦{Number(req.maxBudget).toLocaleString()}
                                 </span>
                               </div>
@@ -579,7 +550,7 @@ export function App() {
                               href={`http://localhost:5180/?token=${req.publicToken}&view=offers`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="h-8 px-3 rounded-[8px] bg-white hover:bg-[#FAF9F6] text-xs text-[#10393b] font-normal flex items-center gap-1.5 transition-all"
+                              className="h-8 px-3 rounded-[5px] bg-white hover:bg-[#FAF9F6] text-xs text-[#10393b] font-normal flex items-center gap-1.5 transition-all"
                             >
                               <span>Buyer View</span>
                               <ChevronRightIcon className="w-3.5 h-3.5 text-[#777777]" />
@@ -597,35 +568,29 @@ export function App() {
           {/* TAB 2: STAFF REVIEW QUEUE */}
           {currentTab === 'reviews' && (
             <div key="reviews" className="space-y-6 animate-chat-morph">
-              <div className="bg-white rounded-[18px] p-6">
-                <h2 className="text-xl sm:text-2xl font-normal text-[#10393b] mb-1">
+              <div className="bg-white rounded-[10px] p-6">
+                <h2 className="text-xl sm:text-2xl font-normal text-[#10393b]">
                   Multimodal AI Offer Verification Queue
                 </h2>
-                <p className="text-xs text-[#666666] font-normal">
-                  Offers with confidence scores under 85% or detected anomalies require staff verification before publishing to students.
-                </p>
               </div>
 
               {reviews.length === 0 ? (
-                <div className="bg-white rounded-[18px] p-12 text-center">
+                <div className="bg-white rounded-[10px] p-12 text-center">
                   <CheckCircleIcon className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
-                  <h3 className="text-base font-normal text-[#10393b] mb-1">
+                  <h3 className="text-base font-normal text-[#10393b]">
                     Queue is All Clear!
                   </h3>
-                  <p className="text-xs text-[#666666] max-w-sm mx-auto font-normal">
-                    All verified vendor offers are currently processed and published to buyers.
-                  </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4">
                   {reviews.map((rev) => (
                     <div
                       key={rev.id}
-                      className="bg-white rounded-[18px] p-6 transition-all"
+                      className="bg-white rounded-[10px] p-6 transition-all"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-normal px-2.5 py-1 rounded-[6px] bg-[#ffad24]/10 text-[#ffad24]">
+                          <span className="font-mono text-xs font-normal px-2 py-0.5 rounded-[3px] bg-[#ffad24]/10 text-[#ffad24]">
                             {rev.requestToken}
                           </span>
                           <span className="text-xs text-[#555555] font-normal">
@@ -650,7 +615,7 @@ export function App() {
                       </div>
 
                       <div className="flex items-start gap-4">
-                        <div className="w-16 h-16 rounded-[10px] bg-[#eceae2] overflow-hidden flex-shrink-0">
+                        <div className="w-16 h-16 rounded-[6px] bg-[#eceae2] overflow-hidden flex-shrink-0">
                           {rev.cloudinaryPhotos[0] && (
                             <img
                               src={rev.cloudinaryPhotos[0]}
@@ -663,7 +628,7 @@ export function App() {
                           <h4 className="text-sm font-normal text-[#10393b]">
                             {rev.brand} {rev.model} — ₦{Number(rev.price).toLocaleString()}
                           </h4>
-                          <p className="text-xs text-[#ffad24] bg-[#ffad24]/10 px-2.5 py-1 rounded-[6px] inline-block mt-1 font-normal">
+                          <p className="text-xs text-[#ffad24] bg-[#ffad24]/10 px-2 py-0.5 rounded-[3px] inline-block mt-1 font-normal">
                             Flag Reason: {rev.flagReason}
                           </p>
                         </div>
@@ -677,16 +642,11 @@ export function App() {
 
           {/* TAB 3: REQUESTS BOARD */}
           {currentTab === 'requests' && (
-            <div key="requests" className="bg-white rounded-[18px] p-6 space-y-5 animate-chat-morph">
+            <div key="requests" className="bg-white rounded-[10px] p-6 space-y-5 animate-chat-morph">
               <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl sm:text-2xl font-normal text-[#10393b]">
-                    Active Buyer Requests Board
-                  </h3>
-                  <span className="text-xs text-[#666666] font-normal">
-                    All student demand actively sourcing campus sellers
-                  </span>
-                </div>
+                <h3 className="text-xl sm:text-2xl font-normal text-[#10393b]">
+                  Active Buyer Requests Board
+                </h3>
                 <Button
                   variant="secondary"
                   size="sm"
@@ -703,9 +663,9 @@ export function App() {
                 {isRefreshing && requests.length === 0 ? (
                   <div className="space-y-2.5">
                     {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="p-4 rounded-[10px] bg-[#eceae2] animate-pulse space-y-2">
-                        <div className="h-4 bg-[#e0ded6] rounded-[6px] w-1/4" />
-                        <div className="h-3 bg-[#e0ded6] rounded-[6px] w-1/2" />
+                      <div key={i} className="p-4 rounded-[6px] bg-[#eceae2] animate-pulse space-y-2">
+                        <div className="h-4 bg-[#e0ded6] rounded-[3px] w-1/4" />
+                        <div className="h-3 bg-[#e0ded6] rounded-[3px] w-1/2" />
                       </div>
                     ))}
                   </div>
@@ -713,7 +673,7 @@ export function App() {
                   requests.map((r) => (
                     <div
                       key={r.id}
-                      className="p-4 rounded-[10px] bg-[#eceae2] hover:bg-[#e4e1d7] transition-all"
+                      className="p-4 rounded-[6px] bg-[#eceae2] hover:bg-[#e4e1d7] transition-all"
                     >
                       {/* Responsive 2-Row Card Structure */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -725,7 +685,7 @@ export function App() {
                             </span>
                             <span className="text-xs font-normal text-[#10393b]">{r.buyerName}</span>
                             <span className="text-[11px] text-[#777777] font-mono">({r.buyerPhone})</span>
-                            <span className={`px-2.5 py-0.5 rounded-[6px] text-[10px] font-normal inline-flex items-center gap-1.5 ${
+                            <span className={`px-2 py-0.5 rounded-[3px] text-[10px] font-normal inline-flex items-center gap-1.5 ${
                               r.status === 'OFFERS_READY'
                                 ? 'bg-emerald-100 text-emerald-800'
                                 : 'bg-white text-[#10393b]'
@@ -751,7 +711,7 @@ export function App() {
                             href={`http://localhost:5180/?token=${r.publicToken}&view=offers`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="h-8 px-3 rounded-[8px] bg-white hover:bg-[#FAF9F6] text-xs font-normal text-[#10393b] flex items-center justify-center gap-1.5 transition-all"
+                            className="h-8 px-3 rounded-[5px] bg-white hover:bg-[#FAF9F6] text-xs font-normal text-[#10393b] flex items-center justify-center gap-1.5 transition-all"
                           >
                             <span>Buyer View</span>
                             <ChevronRightIcon className="w-3.5 h-3.5 text-[#777777]" />
@@ -768,15 +728,10 @@ export function App() {
           {/* TAB 4: VERIFIED SELLERS */}
           {currentTab === 'sellers' && (
             <div key="sellers" className="space-y-6 animate-chat-morph">
-              <div className="bg-white rounded-[18px] p-6 flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-normal text-[#10393b]">
-                    Verified Campus Sellers Directory
-                  </h2>
-                  <p className="text-xs text-[#666666] font-normal">
-                    Vendors vetted for genuine hardware, WhatsApp broadcast access, and warranty commitments.
-                  </p>
-                </div>
+              <div className="bg-white rounded-[10px] p-6 flex items-center justify-between">
+                <h2 className="text-xl sm:text-2xl font-normal text-[#10393b]">
+                  Verified Campus Sellers Directory
+                </h2>
                 <Button
                   variant="primary"
                   size="sm"
@@ -792,14 +747,14 @@ export function App() {
                 {sellers.map((s) => (
                   <div
                     key={s.id}
-                    className="bg-white rounded-[18px] p-5 transition-all flex flex-col justify-between"
+                    className="bg-white rounded-[10px] p-5 transition-all flex flex-col justify-between"
                   >
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <span className="font-normal text-sm text-[#10393b]">
                           {s.businessName}
                         </span>
-                        <span className="text-xs font-normal px-2.5 py-0.5 rounded-[6px] bg-emerald-50 text-emerald-800">
+                        <span className="text-xs font-normal px-2 py-0.5 rounded-[3px] bg-emerald-50 text-emerald-800">
                           ★ {s.rating}
                         </span>
                       </div>
@@ -811,7 +766,7 @@ export function App() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-3 bg-[#eceae2] -mx-5 -mb-5 px-5 py-3 rounded-b-[18px]">
+                    <div className="flex items-center justify-between pt-3 bg-[#eceae2] -mx-5 -mb-5 px-5 py-3 rounded-b-[10px]">
                       <span className="text-[10px] uppercase font-normal text-[#777777]">
                         {s.categories.join(', ')}
                       </span>
@@ -833,18 +788,15 @@ export function App() {
 
           {/* TAB 5: DEALS & ESCROW */}
           {currentTab === 'deals' && (
-            <div key="deals" className="bg-white rounded-[18px] p-6 sm:p-8 space-y-6 animate-chat-morph">
+            <div key="deals" className="bg-white rounded-[10px] p-6 sm:p-8 space-y-6 animate-chat-morph">
               <div>
                 <h2 className="text-xl sm:text-2xl font-normal text-[#10393b]">
                   Deal Settlement & Commission Escrow
                 </h2>
-                <p className="text-xs text-[#666666] font-normal">
-                  Tracks locked matches, campus pickup handovers, and Handular 5% brokerage settlement.
-                </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-5 rounded-[14px] bg-[#eceae2]">
+                <div className="p-5 rounded-[8px] bg-[#eceae2]">
                   <span className="block text-xs font-normal text-[#777777] uppercase">
                     Escrow Guaranteed Deals
                   </span>
@@ -852,7 +804,7 @@ export function App() {
                     {metrics ? metrics.completedDealsCount : 1}
                   </span>
                 </div>
-                <div className="p-5 rounded-[14px] bg-[#eceae2]">
+                <div className="p-5 rounded-[8px] bg-[#eceae2]">
                   <span className="block text-xs font-normal text-[#777777] uppercase">
                     Total Volume
                   </span>
@@ -860,7 +812,7 @@ export function App() {
                     ₦{metrics ? Number(metrics.totalVolume).toLocaleString() : '620,000'}
                   </span>
                 </div>
-                <div className="p-5 rounded-[14px] bg-[#eceae2]">
+                <div className="p-5 rounded-[8px] bg-[#eceae2]">
                   <span className="block text-xs font-normal text-[#777777] uppercase">
                     Campus Hub Commission
                   </span>
@@ -870,7 +822,7 @@ export function App() {
                 </div>
               </div>
 
-              <div className="p-4 rounded-[14px] bg-[#eceae2] text-xs text-[#444444] flex items-center justify-between font-normal">
+              <div className="p-4 rounded-[8px] bg-[#eceae2] text-xs text-[#444444] flex items-center justify-between font-normal">
                 <div className="flex items-center gap-2">
                   <ShieldCheckIcon className="w-4 h-4 text-emerald-600" />
                   <span>Campus Tech Lounge Escrow verification active at Room 104.</span>
@@ -886,7 +838,7 @@ export function App() {
       <nav className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md h-16 flex items-center justify-around z-30 md:hidden px-2">
         <button
           onClick={() => setCurrentTab('dashboard')}
-          className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-[10px] transition-all cursor-pointer ${
+          className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-[6px] transition-all cursor-pointer ${
             currentTab === 'dashboard'
               ? 'bg-black/10 text-[#0f2d2e] font-medium'
               : 'text-[#10393b]/60 hover:text-[#10393b]'
@@ -898,7 +850,7 @@ export function App() {
 
         <button
           onClick={() => setCurrentTab('reviews')}
-          className={`relative flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-[10px] transition-all cursor-pointer ${
+          className={`relative flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-[6px] transition-all cursor-pointer ${
             currentTab === 'reviews'
               ? 'bg-black/10 text-[#0f2d2e] font-medium'
               : 'text-[#10393b]/60 hover:text-[#10393b]'
@@ -913,7 +865,7 @@ export function App() {
 
         <button
           onClick={() => setCurrentTab('requests')}
-          className={`relative flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-[10px] transition-all cursor-pointer ${
+          className={`relative flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-[6px] transition-all cursor-pointer ${
             currentTab === 'requests'
               ? 'bg-black/10 text-[#0f2d2e] font-medium'
               : 'text-[#10393b]/60 hover:text-[#10393b]'
@@ -930,7 +882,7 @@ export function App() {
 
         <button
           onClick={() => setCurrentTab('sellers')}
-          className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-[10px] transition-all cursor-pointer ${
+          className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-[6px] transition-all cursor-pointer ${
             currentTab === 'sellers'
               ? 'bg-black/10 text-[#0f2d2e] font-medium'
               : 'text-[#10393b]/60 hover:text-[#10393b]'
@@ -942,7 +894,7 @@ export function App() {
 
         <button
           onClick={() => setCurrentTab('deals')}
-          className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-[10px] transition-all cursor-pointer ${
+          className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-[6px] transition-all cursor-pointer ${
             currentTab === 'deals'
               ? 'bg-black/10 text-[#0f2d2e] font-medium'
               : 'text-[#10393b]/60 hover:text-[#10393b]'
@@ -953,13 +905,13 @@ export function App() {
         </button>
       </nav>
 
-      {/* INSPECT & APPROVE MODAL - ZERO BORDERS, ZERO SHADOWS, MORPH TRANSITION */}
+      {/* INSPECT & APPROVE MODAL - ZERO BORDERS, ZERO SHADOWS, 10PX CURVE */}
       {activeReview && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-[18px] w-full max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar p-6 sm:p-7 space-y-6 animate-chat-morph">
+          <div className="bg-white rounded-[10px] w-full max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar p-6 sm:p-7 space-y-6 animate-chat-morph">
             <div className="flex items-center justify-between">
               <div>
-                <span className="font-mono text-xs font-normal px-2.5 py-1 rounded-[6px] bg-[#eceae2] text-[#10393b]">
+                <span className="font-mono text-xs font-normal px-2 py-0.5 rounded-[3px] bg-[#eceae2] text-[#10393b]">
                   {activeReview.requestToken}
                 </span>
                 <h3 className="text-base font-normal text-[#10393b] mt-2">
@@ -968,7 +920,7 @@ export function App() {
               </div>
               <button
                 onClick={() => setActiveReview(null)}
-                className="w-8 h-8 rounded-[8px] hover:bg-[#eceae2] flex items-center justify-center text-[#777777] hover:text-[#10393b] cursor-pointer"
+                className="w-7 h-7 rounded-[4px] hover:bg-[#eceae2] flex items-center justify-center text-[#777777] hover:text-[#10393b] cursor-pointer"
               >
                 <XMarkIcon className="w-4 h-4" />
               </button>
@@ -976,7 +928,7 @@ export function App() {
 
             {/* Side-by-Side: Raw WhatsApp vs AI */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-4 rounded-[10px] bg-[#eceae2] space-y-2">
+              <div className="p-4 rounded-[6px] bg-[#eceae2] space-y-2">
                 <span className="block text-[11px] font-normal text-[#777777] uppercase tracking-wider">
                   Raw WhatsApp Inbound
                 </span>
@@ -984,13 +936,13 @@ export function App() {
                   &quot;{activeReview.rawMessages.join(' ') || 'Vendor sent device photos and specs directly.'}&quot;
                 </p>
                 {activeReview.audioTranscript && (
-                  <p className="text-xs text-[#10393b] bg-[#30c5ce]/10 p-2.5 rounded-[10px] font-normal">
+                  <p className="text-xs text-[#10393b] bg-[#30c5ce]/10 p-2.5 rounded-[6px] font-normal">
                     Voice Note: &quot;{activeReview.audioTranscript}&quot;
                   </p>
                 )}
               </div>
 
-              <div className="p-4 rounded-[10px] bg-[#ffad24]/10 space-y-2">
+              <div className="p-4 rounded-[6px] bg-[#ffad24]/10 space-y-2">
                 <span className="block text-[11px] font-normal text-[#ffad24] uppercase tracking-wider">
                   AI Flag & Confidence
                 </span>
@@ -1015,7 +967,7 @@ export function App() {
                     type="number"
                     value={editPrice}
                     onChange={(e) => setEditPrice(Number(e.target.value))}
-                    className="w-full h-11 px-3.5 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm font-mono font-normal text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 border-0"
+                    className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm font-mono font-normal text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 border-0"
                   />
                 </div>
                 <div>
@@ -1024,7 +976,7 @@ export function App() {
                     type="text"
                     value={editGrade}
                     onChange={(e) => setEditGrade(e.target.value)}
-                    className="w-full h-11 px-3.5 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
+                    className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
                   />
                 </div>
               </div>
@@ -1053,12 +1005,12 @@ export function App() {
         </div>
       )}
 
-      {/* ADD VENDOR MODAL - ZERO BORDERS, ZERO SHADOWS, MORPH TRANSITION */}
+      {/* ADD VENDOR MODAL - ZERO BORDERS, ZERO SHADOWS, 10PX CURVE */}
       {showAddSellerModal && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <form
             onSubmit={handleCreateSeller}
-            className="bg-white rounded-[18px] w-full max-w-md p-6 sm:p-7 space-y-4 animate-chat-morph"
+            className="bg-white rounded-[10px] w-full max-w-md p-6 sm:p-7 space-y-4 animate-chat-morph"
           >
             <h3 className="text-base font-normal text-[#10393b]">
               Add Verified Campus Vendor
@@ -1071,7 +1023,7 @@ export function App() {
                 placeholder="e.g. Apex Gadgets Hub"
                 value={newSellerName}
                 onChange={(e) => setNewSellerName(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
+                className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
               />
             </div>
             <div>
@@ -1082,7 +1034,7 @@ export function App() {
                 placeholder="e.g. Samuel"
                 value={newSellerContact}
                 onChange={(e) => setNewSellerContact(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
+                className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
               />
             </div>
             <div>
@@ -1093,7 +1045,7 @@ export function App() {
                 placeholder="e.g. 2348012345678"
                 value={newSellerPhone}
                 onChange={(e) => setNewSellerPhone(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
+                className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
               />
             </div>
             <div>
@@ -1103,7 +1055,7 @@ export function App() {
                 placeholder="e.g. @jerus_tech"
                 value={newSellerTelegram}
                 onChange={(e) => setNewSellerTelegram(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
+                className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
               />
             </div>
             <div>
@@ -1111,7 +1063,7 @@ export function App() {
               <select
                 value={newSellerCategory}
                 onChange={(e) => setNewSellerCategory(e.target.value as any)}
-                className="w-full h-11 px-3.5 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal cursor-pointer border-0"
+                className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal cursor-pointer border-0"
               >
                 <option value="LAPTOPS">Laptops</option>
                 <option value="PHONES">Phones</option>

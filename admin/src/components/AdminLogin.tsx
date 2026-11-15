@@ -54,25 +54,22 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
         <img
           src="/handular_icon.png"
           alt="Handular"
-          className="w-14 h-14 max-w-[56px] rounded-[10px] object-contain mx-auto"
+          className="w-12 h-12 max-w-[48px] rounded-[6px] object-contain mx-auto"
         />
       </div>
 
-      {/* Main Centered Squircle Card - ZERO BORDERS, ZERO SHADOWS */}
-      <div className="w-full max-w-[380px] bg-white rounded-[18px] p-6 sm:p-8 animate-chat-morph">
-        {/* Title - Increased one notch */}
-        <div className="text-center mb-5">
-          <h1 className="text-2xl sm:text-3xl font-normal tracking-tight text-[#10393b] mb-1">
+      {/* Main Centered Squircle Card - ZERO BORDERS, ZERO SHADOWS, 10PX CURVE (2 levels reduced) */}
+      <div className="w-full max-w-[380px] bg-white rounded-[10px] p-6 sm:p-8 animate-chat-morph">
+        {/* Title - Clean without subheading */}
+        <div className="text-center mb-6">
+          <h1 className="text-2xl sm:text-3xl font-normal tracking-tight text-[#10393b]">
             Admin Portal
           </h1>
-          <p className="text-xs text-[#666666] font-normal">
-            Sign in with your Handular staff credentials
-          </p>
         </div>
 
         {/* Error notification banner */}
         {error && (
-          <div className="mb-4 p-3 rounded-[10px] bg-red-50 text-red-600 text-xs flex items-center gap-2 font-normal">
+          <div className="mb-4 p-3 rounded-[6px] bg-red-50 text-red-600 text-xs flex items-center gap-2 font-normal">
             <ExclamationCircleIcon className="w-4 h-4 flex-shrink-0" />
             <span>{error}</span>
           </div>
@@ -91,7 +88,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="admin@handular.com"
-                className="w-full h-11 pl-10 pr-4 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] placeholder:text-[#999999] outline-none transition-all focus:ring-2 focus:ring-[#30c5ce]/30 font-normal"
+                className="w-full h-11 pl-10 pr-4 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] placeholder:text-[#999999] outline-none transition-all focus:ring-2 focus:ring-[#30c5ce]/30 font-normal"
                 required
               />
             </div>
@@ -108,7 +105,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full h-11 pl-10 pr-10 rounded-[10px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] placeholder:text-[#999999] outline-none transition-all focus:ring-2 focus:ring-[#30c5ce]/30 font-normal"
+                className="w-full h-11 pl-10 pr-10 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] placeholder:text-[#999999] outline-none transition-all focus:ring-2 focus:ring-[#30c5ce]/30 font-normal"
                 required
               />
               <button

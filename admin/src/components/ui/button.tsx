@@ -12,44 +12,44 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const baseStyles =
       'inline-flex items-center justify-center font-medium transition-all duration-150 cursor-pointer disabled:opacity-40 disabled:pointer-events-none select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#30c5ce] focus-visible:ring-offset-2';
 
-    // Pure Flat Tactile Squircle Buttons - ZERO BORDERS, ZERO SHADOWS, 10PX CURVE
+    // Pure Flat Tactile Buttons - ZERO BORDERS, ZERO SHADOWS, 6PX CURVE (2 levels reduced)
     const variants = {
       primary: cn(
-        'rounded-[10px] bg-[#10393b] text-white',
+        'rounded-[6px] bg-[#10393b] text-white',
         'hover:bg-[#154b4d]',
         'active:translate-y-[0.5px] active:bg-[#0c2b2c]'
       ),
       secondary: cn(
-        'rounded-[10px] bg-[#eceae2] text-[#10393b]',
+        'rounded-[6px] bg-[#eceae2] text-[#10393b]',
         'hover:bg-[#e4e1d7]',
         'active:translate-y-[0.5px] active:bg-[#dbd8cc]'
       ),
       outline: cn(
-        'rounded-[10px] bg-black/[0.04] text-[#10393b]',
+        'rounded-[6px] bg-black/[0.04] text-[#10393b]',
         'hover:bg-black/[0.08]',
         'active:translate-y-[0.5px]'
       ),
       ghost: cn(
-        'rounded-[10px] text-[#555555] hover:text-[#10393b] hover:bg-black/5',
+        'rounded-[6px] text-[#555555] hover:text-[#10393b] hover:bg-black/5',
         'active:bg-black/10'
       ),
       icon: cn(
-        'rounded-[10px] bg-[#eceae2] text-[#10393b]',
+        'rounded-[6px] bg-[#eceae2] text-[#10393b]',
         'hover:bg-[#e4e1d7]',
         'active:translate-y-[0.5px]'
       ),
       accent: cn(
-        'rounded-[10px] bg-[#154b4d] text-white',
+        'rounded-[6px] bg-[#154b4d] text-white',
         'hover:bg-[#10393b]',
         'active:translate-y-[0.5px]'
       ),
     };
 
     const sizes = {
-      sm: 'text-xs px-3 py-1.5 gap-1.5 tracking-tight',
-      md: 'text-xs md:text-[13px] px-3.5 md:px-4 py-2 md:py-2.5 gap-1.5 tracking-tight font-medium',
-      lg: 'text-sm md:text-base px-6 py-2.5 md:py-3 gap-2 tracking-tight font-medium',
-      icon: 'w-8 h-8 p-0',
+      sm: 'text-xs px-2.5 py-1.5 gap-1.5 tracking-tight',
+      md: 'text-xs md:text-[13px] px-3 md:px-3.5 py-1.5 md:py-2 gap-1.5 tracking-tight font-medium',
+      lg: 'text-sm md:text-base px-5 py-2 md:py-2.5 gap-2 tracking-tight font-medium',
+      icon: 'w-7 h-7 p-0',
     };
 
     return (
@@ -76,7 +76,7 @@ export function ButtonGroup({
   return (
     <div
       className={cn(
-        'inline-flex items-center rounded-[10px] bg-[#eceae2] p-1 gap-1',
+        'inline-flex items-center rounded-[6px] bg-[#eceae2] p-1 gap-1',
         className
       )}
     >

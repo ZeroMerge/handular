@@ -128,11 +128,13 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         {/* Top Header: Official Handular Logo & Close */}
         <div className="h-16 px-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <img
-              src="/handular_icon.png"
-              alt="Handular"
-              className="w-8 h-8 rounded-[8px] object-contain drop-shadow-none"
-            />
+            <div className="w-8 h-8 rounded-[8px] bg-[#10393b] flex items-center justify-center p-1.5 shrink-0 overflow-hidden">
+              <img
+                src="/handular_icon.png"
+                alt="Handular"
+                className="w-full h-full object-contain"
+              />
+            </div>
             <span className="font-semibold text-base tracking-tight text-[#10393b]">
               Handular
             </span>

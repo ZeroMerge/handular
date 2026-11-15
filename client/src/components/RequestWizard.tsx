@@ -412,11 +412,11 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
               }`}
             >
               {!isUser && (
-                <div className="w-7 h-7 rounded-full overflow-hidden bg-[#10393b] flex items-center justify-center shrink-0 mb-1">
+                <div className="w-7 h-7 rounded-full overflow-hidden bg-[#10393b] flex items-center justify-center shrink-0 mb-1 p-1.5">
                   <img
                     src="/handular_icon.png"
                     alt="Handular"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                 </div>
               )}
@@ -437,11 +437,11 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
         {/* 3-Dot Bouncing Typing Bubble */}
         {isBotTyping && (
           <div className="flex items-end gap-2 animate-in fade-in duration-150">
-            <div className="w-7 h-7 rounded-full overflow-hidden bg-[#10393b] flex items-center justify-center shrink-0 mb-1">
+            <div className="w-7 h-7 rounded-full overflow-hidden bg-[#10393b] flex items-center justify-center shrink-0 mb-1 p-1.5">
               <img
                 src="/handular_icon.png"
                 alt="Handular"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
               />
             </div>
             <div className="px-3.5 py-3 rounded-[14px] rounded-tl-[4px] bg-white flex items-center gap-1.5 shadow-none">

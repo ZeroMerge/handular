@@ -26,11 +26,13 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 }) => {
   const [requests, setRequests] = useState<UserRequestSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchMyRequests = async () => {
     if (!token) return;
+    setIsRefreshing(true);
+    const startTime = Date.now();
     try {
-      setLoading(true);
       const res = await fetch(`${apiBaseUrl}/api/v1/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -41,7 +43,12 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
     } catch (err) {
       console.warn('Failed to fetch user requests:', err);
     } finally {
-      setLoading(false);
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, 700 - elapsed);
+      setTimeout(() => {
+        setIsRefreshing(false);
+        setLoading(false);
+      }, remaining);
     }
   };
 
@@ -93,11 +100,12 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
         </h1>
         <button
           onClick={fetchMyRequests}
+          disabled={isRefreshing}
           title="Refresh orders"
           aria-label="Refresh orders"
-          className="w-8 h-8 rounded-[8px] bg-[#eceae2] hover:bg-[#e4e1d7] active:bg-[#dbd8cc] text-[#10393b] flex items-center justify-center transition-all cursor-pointer"
+          className="w-8 h-8 rounded-[8px] bg-[#eceae2] hover:bg-[#e4e1d7] active:bg-[#dbd8cc] text-[#10393b] flex items-center justify-center transition-all cursor-pointer disabled:opacity-80"
         >
-          <ArrowPathIcon className={`w-4 h-4 shrink-0 ${loading ? 'animate-spin' : ''}`} />
+          <ArrowPathIcon className={`w-4 h-4 shrink-0 transition-transform ${isRefreshing ? 'animate-spin-smooth' : ''}`} />
         </button>
       </div>
 

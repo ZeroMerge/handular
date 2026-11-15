@@ -27,11 +27,13 @@ export const OfferShowcase: React.FC<OfferShowcaseProps> = ({
   const [request, setRequest] = useState<BuyerRequestData | null>(null);
   const [offers, setOffers] = useState<OfferData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchOffers = async () => {
+    setIsRefreshing(true);
+    const startTime = Date.now();
     try {
-      setLoading(true);
       setError(null);
       const res = await fetch(`${apiBaseUrl}/api/v1/offers/${token}`);
       if (!res.ok) {
@@ -43,7 +45,13 @@ export const OfferShowcase: React.FC<OfferShowcaseProps> = ({
     } catch (err: any) {
       setError(err.message || 'Error fetching offers');
     } finally {
-      setLoading(false);
+      // Ensure real spinning animation completes at least one full satisfying cycle (700ms)
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, 700 - elapsed);
+      setTimeout(() => {
+        setIsRefreshing(false);
+        setLoading(false);
+      }, remaining);
     }
   };
 
@@ -116,11 +124,15 @@ export const OfferShowcase: React.FC<OfferShowcaseProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={fetchOffers}
-              className="w-8 h-8 rounded-[8px] bg-[#eceae2] hover:bg-[#e4e1d7] flex items-center justify-center text-[#10393b] transition-all cursor-pointer"
+              disabled={isRefreshing}
+              className="w-8 h-8 rounded-[8px] bg-[#eceae2] hover:bg-[#e4e1d7] active:bg-[#dbd8cc] flex items-center justify-center text-[#10393b] transition-all cursor-pointer disabled:opacity-80"
               title="Refresh quotes"
+              aria-label="Refresh quotes"
             >
               <ArrowPathIcon
-                className={`w-4 h-4 shrink-0 ${loading ? 'animate-spin' : ''}`}
+                className={`w-4 h-4 shrink-0 transition-transform ${
+                  isRefreshing ? 'animate-spin-smooth' : ''
+                }`}
               />
             </button>
           </div>

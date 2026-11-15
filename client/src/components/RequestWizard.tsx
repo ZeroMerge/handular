@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   ArrowRightIcon,
+  ArrowPathIcon,
 } from './ui/icons';
 import { StudentUser, OfferData } from '../types';
 import { Button } from './ui/button';
@@ -47,7 +48,7 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
   const [trackingCode, setTrackingCode] = useState<string | null>(null);
   const [submittedToken, setSubmittedToken] = useState<string | null>(null);
   const [offers, setOffers] = useState<OfferData[]>([]);
-  const [loadingOffers, setLoadingOffers] = useState(false);
+  const [isRefreshingOffers, setIsRefreshingOffers] = useState(false);
 
   // Chat animation state
   const [isBotTyping, setIsBotTyping] = useState(false);
@@ -384,7 +385,8 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
   };
 
   const fetchOffers = async (token: string) => {
-    setLoadingOffers(true);
+    setIsRefreshingOffers(true);
+    const startTime = Date.now();
     try {
       const res = await fetch(`${apiBaseUrl}/api/v1/offers/${token}`);
       const data = await res.json();
@@ -394,7 +396,11 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
     } catch {
       // Silent catch
     } finally {
-      setLoadingOffers(false);
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, 700 - elapsed);
+      setTimeout(() => {
+        setIsRefreshingOffers(false);
+      }, remaining);
     }
   };
 
@@ -520,10 +526,11 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
                 </span>
                 <button
                   onClick={() => fetchOffers(submittedToken)}
+                  disabled={isRefreshingOffers}
                   title="Refresh offers"
-                  className="p-1.5 rounded-[8px] hover:bg-[#eceae2] text-[#10393b] transition-all cursor-pointer"
+                  className="p-1.5 rounded-[8px] hover:bg-[#eceae2] text-[#10393b] transition-all cursor-pointer disabled:opacity-80"
                 >
-                  <ArrowRightIcon className={`w-3.5 h-3.5 ${loadingOffers ? 'animate-spin' : ''}`} />
+                  <ArrowPathIcon className={`w-3.5 h-3.5 shrink-0 transition-transform ${isRefreshingOffers ? 'animate-spin-smooth' : ''}`} />
                 </button>
               </div>
             </div>

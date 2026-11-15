@@ -117,10 +117,21 @@ export const ArrowRightIcon: React.FC<IconProps> = ({ className = 'w-5 h-5', ...
   </svg>
 );
 
-// Arrow Path / Refresh - Heroicons 24 Solid
+// Arrow Path / Refresh - Modern Balanced Dual-Arc Refresh
 export const ArrowPathIcon: React.FC<IconProps> = ({ className = 'w-5 h-5', ...props }) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true" {...props}>
-    <path fillRule="evenodd" d="M4.755 10.059a7.5 7.5 0 0 1 12.548-3.364l1.903 1.903h-3.183a.75.75 0 1 0 0 1.5h4.992a.75.75 0 0 0 .75-.75V4.356a.75.75 0 0 0-1.5 0v3.18l-1.9-1.9A9 9 0 0 0 3.306 9.67a.75.75 0 1 0 1.45.388Zm15.408 3.352a.75.75 0 0 0-.919.53 7.5 7.5 0 0 1-12.548 3.364l-1.902-1.903h3.183a.75.75 0 0 0 0-1.5H2.984a.75.75 0 0 0-.75.75v4.992a.75.75 0 0 0 1.5 0v-3.18l1.9 1.9a9 9 0 0 0 15.059-4.035.75.75 0 0 0-.53-.918Z" clipRule="evenodd" />
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden="true"
+    {...props}
+  >
+    <path d="M20 11A8.1 8.1 0 0 0 4.5 9M4 4v5h5" />
+    <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 5v-5h-5" />
   </svg>
 );
 

@@ -48,3 +48,17 @@ button, input, select, textarea {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Smooth continuous rotation animation */
+@keyframes spin-continuous {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-smooth {
+  animation: spin-continuous 0.65s linear infinite;
+}

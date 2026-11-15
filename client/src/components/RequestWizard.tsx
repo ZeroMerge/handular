@@ -101,6 +101,22 @@ function inferWizardStateFromMessages(msgs: ChatMsg[]) {
   };
 }
 
+interface CachedSession {
+  messages: ChatMsg[];
+  buyerRequest?: any;
+  trackingCode?: string;
+  category?: 'LAPTOPS' | 'PHONES' | 'ACCESSORIES';
+  brand?: string;
+  useCase?: string;
+  maxBudget?: number;
+  selectedSpecs?: string[];
+  customNotes?: string;
+  currentStep?: Step;
+}
+
+// In-memory cache for instant WhatsApp-like chat switching without loading screens
+const chatSessionCache = new Map<string, CachedSession>();
+
 export const RequestWizard: React.FC<RequestWizardProps> = ({
   apiBaseUrl,
   onRequestSubmitted,
@@ -110,23 +126,61 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
 }) => {
   const firstName = currentUser?.fullName?.split(' ')[0] || 'there';
 
+  const initialCached = activeChatId ? chatSessionCache.get(activeChatId) : null;
+
+  // Read unauthenticated draft if no activeChatId
+  const getInitialDraft = (): DraftChatData | null => {
+    if (activeChatId) return null;
+    try {
+      const raw = localStorage.getItem('handular_draft_chat');
+      if (raw) {
+        const d: DraftChatData = JSON.parse(raw);
+        if (d.currentStep !== 'completed' && !d.chatId && d.messages && d.messages.length > 2) {
+          return d;
+        }
+      }
+    } catch {}
+    return null;
+  };
+
+  const initialDraft = getInitialDraft();
+
   // Request State
-  const [category, setCategory] = useState<'LAPTOPS' | 'PHONES' | 'ACCESSORIES'>('LAPTOPS');
-  const [brand, setBrand] = useState('Apple');
-  const [useCase, setUseCase] = useState('Coding & Tech');
-  const [maxBudget, setMaxBudget] = useState(400000);
+  const [category, setCategory] = useState<'LAPTOPS' | 'PHONES' | 'ACCESSORIES'>(
+    initialCached?.category || initialDraft?.category || 'LAPTOPS'
+  );
+  const [brand, setBrand] = useState(
+    initialCached?.brand || initialDraft?.brand || 'Apple MacBook'
+  );
+  const [useCase, setUseCase] = useState(
+    initialCached?.useCase || initialDraft?.useCase || 'Coding & Tech'
+  );
+  const [maxBudget, setMaxBudget] = useState(
+    initialCached?.maxBudget || initialDraft?.maxBudget || 400000
+  );
   const [budgetInput, setBudgetInput] = useState('');
   const [budgetError, setBudgetError] = useState<string | null>(null);
-  const [selectedSpecs, setSelectedSpecs] = useState<string[]>([]);
-  const [customNotes, setCustomNotes] = useState('');
-  const [currentStep, setCurrentStep] = useState<Step>('category');
+  const [selectedSpecs, setSelectedSpecs] = useState<string[]>(
+    initialCached?.selectedSpecs || initialDraft?.selectedSpecs || []
+  );
+  const [customNotes, setCustomNotes] = useState(
+    initialCached?.customNotes || initialDraft?.customNotes || ''
+  );
+  const [currentStep, setCurrentStep] = useState<Step>(
+    initialCached?.currentStep || initialDraft?.currentStep || 'category'
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [_trackingCode, setTrackingCode] = useState<string | null>(null);
-  const [submittedToken, setSubmittedToken] = useState<string | null>(null);
-  const [offers, setOffers] = useState<OfferData[]>([]);
+  const [_trackingCode, setTrackingCode] = useState<string | null>(
+    initialCached?.trackingCode || null
+  );
+  const [submittedToken, setSubmittedToken] = useState<string | null>(
+    initialCached?.buyerRequest?.publicToken || null
+  );
+  const [offers, setOffers] = useState<OfferData[]>(
+    initialCached?.buyerRequest?.offers || []
+  );
   const [isRefreshingOffers, setIsRefreshingOffers] = useState(false);
-  const [isLoadingChat, setIsLoadingChat] = useState<boolean>(Boolean(activeChatId));
 
   const getFormatTime = () => {
     const now = new Date();
@@ -158,7 +212,12 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
 
   // Chat animation state
   const [isBotTyping, setIsBotTyping] = useState(false);
-  const [messages, setMessages] = useState<ChatMsg[]>(() => createInitialMessages(firstName));
+  const [messages, setMessages] = useState<ChatMsg[]>(() => {
+    if (initialCached?.messages) return initialCached.messages;
+    if (initialDraft?.messages) return initialDraft.messages;
+    if (activeChatId) return [];
+    return createInitialMessages(firstName);
+  });
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const isCreatingChatRef = useRef(false);
@@ -220,8 +279,7 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
     let isCancelled = false;
 
     if (activeChatId) {
-      setIsLoadingChat(true);
-      // Fetch existing session from API
+      // Fetch existing session from API in the background without any loading interruption
       fetch(`${apiBaseUrl}/api/v1/chats/${activeChatId}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('handular_token') || ''}`,
@@ -233,36 +291,66 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
           const { chat } = data;
           if (chat?.messages && chat.messages.length > 0) {
             setMessages(chat.messages);
+            let nextStep: Step = 'category';
+            let cat: 'LAPTOPS' | 'PHONES' | 'ACCESSORIES' = 'LAPTOPS';
+            let br = 'Apple MacBook';
+            let uc = 'Coding & Tech';
+            let mb = 400000;
+            let sp: string[] = [];
+            let cn = '';
+            let token: string | null = null;
+            let code: string | null = null;
+            let off: OfferData[] = [];
+
             if (chat.buyerRequest) {
-              setSubmittedToken(chat.buyerRequest.publicToken);
-              setTrackingCode(chat.trackingCode || `#${chat.buyerRequest.publicToken}`);
-              setOffers(chat.buyerRequest.offers || []);
+              token = chat.buyerRequest.publicToken;
+              code = chat.trackingCode || `#${chat.buyerRequest.publicToken}`;
+              off = chat.buyerRequest.offers || [];
+              nextStep = 'completed';
+              setSubmittedToken(token);
+              setTrackingCode(code);
+              setOffers(off);
               setCurrentStep('completed');
             } else {
               // Mid-flow draft: restore wizard step and form choices from messages
               const inferred = inferWizardStateFromMessages(chat.messages);
-              setCategory(inferred.category);
-              setBrand(inferred.brand);
-              setUseCase(inferred.useCase);
-              setMaxBudget(inferred.maxBudget);
-              setSelectedSpecs(inferred.selectedSpecs);
-              setCustomNotes(inferred.customNotes);
-              setCurrentStep(inferred.inferredStep);
+              cat = inferred.category;
+              br = inferred.brand;
+              uc = inferred.useCase;
+              mb = inferred.maxBudget;
+              sp = inferred.selectedSpecs;
+              cn = inferred.customNotes;
+              nextStep = inferred.inferredStep;
+
+              setCategory(cat);
+              setBrand(br);
+              setUseCase(uc);
+              setMaxBudget(mb);
+              setSelectedSpecs(sp);
+              setCustomNotes(cn);
+              setCurrentStep(nextStep);
             }
+
+            // Cache session for instant WhatsApp-like switching
+            chatSessionCache.set(activeChatId, {
+              messages: chat.messages,
+              buyerRequest: chat.buyerRequest,
+              trackingCode: code || undefined,
+              category: cat,
+              brand: br,
+              useCase: uc,
+              maxBudget: mb,
+              selectedSpecs: sp,
+              customNotes: cn,
+              currentStep: nextStep,
+            });
           }
         })
-        .catch(() => {})
-        .finally(() => {
-          if (!isCancelled) {
-            setIsLoadingChat(false);
-          }
-        });
+        .catch(() => {});
       return () => {
         isCancelled = true;
       };
     }
-
-    setIsLoadingChat(false);
 
     // No activeChatId: check if there is an unauthenticated local draft
     try {
@@ -339,6 +427,17 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
     if (!token) return;
 
     if (activeChatIdRef.current) {
+      chatSessionCache.set(activeChatIdRef.current, {
+        messages: updatedMessages,
+        category: curCategory,
+        brand: curBrand,
+        useCase: curUseCase,
+        maxBudget: curMaxBudget,
+        selectedSpecs: curSpecs,
+        customNotes: curNotes,
+        currentStep: targetStep,
+      });
+
       fetch(`${apiBaseUrl}/api/v1/chats/${activeChatIdRef.current}`, {
         method: 'PUT',
         headers: {
@@ -370,6 +469,16 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
           if (onChatSessionCreated) {
             onChatSessionCreated(data.chat.id);
           }
+          chatSessionCache.set(data.chat.id, {
+            messages: updatedMessages,
+            category: curCategory,
+            brand: curBrand,
+            useCase: curUseCase,
+            maxBudget: curMaxBudget,
+            selectedSpecs: curSpecs,
+            customNotes: curNotes,
+            currentStep: targetStep,
+          });
           persistDraft({
             chatId: data.chat.id,
             category: curCategory,
@@ -608,6 +717,19 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
         const nextMsgs = [...prev, confirmedMsg];
         const token = localStorage.getItem('handular_token');
         if (token && activeChatIdRef.current) {
+          chatSessionCache.set(activeChatIdRef.current, {
+            messages: nextMsgs,
+            buyerRequest: { publicToken: generatedToken, offers: [] },
+            trackingCode: code,
+            category,
+            brand,
+            useCase,
+            maxBudget,
+            selectedSpecs,
+            customNotes,
+            currentStep: 'completed',
+          });
+
           fetch(`${apiBaseUrl}/api/v1/chats/${activeChatIdRef.current}`, {
             method: 'PUT',
             headers: {
@@ -676,22 +798,8 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
     }
   };
 
-  // Smooth fade-blur loading placeholder when switching chats
-  if (isLoadingChat) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-2.5 sm:py-4 flex flex-col h-[calc(100dvh-8rem)] md:h-[calc(100dvh-4rem)] items-center justify-center animate-fade-blur">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-[#10393b]/20 border-t-[#10393b] animate-spin" />
-          <p className="text-xs text-[#777777] font-normal tracking-wide animate-pulse">
-            Loading conversation...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-2.5 sm:py-4 flex flex-col h-[calc(100dvh-8rem)] md:h-[calc(100dvh-4rem)] animate-fade-blur">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-2.5 sm:py-4 flex flex-col h-[calc(100dvh-8rem)] md:h-[calc(100dvh-4rem)] animate-chat-morph">
       {/* Conversation Thread - Pure Clean Chat Flow (NO Banners, NO Start Over) */}
       <div
         ref={chatContainerRef}

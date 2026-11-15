@@ -323,7 +323,7 @@ export function App() {
 
       <main className={`flex-1 ${view === 'wizard' ? 'overflow-hidden' : 'pb-24 md:pb-16'}`}>
         {view === 'wizard' && (
-          <div key={activeChatId || 'new-request'} className="h-full animate-fade-blur">
+          <div key={activeChatId || 'new-request'} className="h-full animate-chat-morph">
             <RequestWizard
               apiBaseUrl={API_BASE_URL}
               onRequestSubmitted={handleRequestSubmitted}
@@ -341,7 +341,7 @@ export function App() {
         )}
 
         {(view === 'orders' || view === 'offers') && (
-          <div key="orders-view" className="animate-fade-blur">
+          <div key="orders-view" className="animate-chat-morph">
             <OrdersView
               apiBaseUrl={API_BASE_URL}
               token={authToken}
@@ -364,7 +364,7 @@ export function App() {
         )}
 
         {view === 'profile' && (
-          <div key="profile-view" className="animate-fade-blur">
+          <div key="profile-view" className="animate-chat-morph">
             <ProfileView
               user={currentUser}
               token={authToken}

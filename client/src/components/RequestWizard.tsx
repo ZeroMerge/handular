@@ -401,7 +401,7 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-6 flex flex-col h-[calc(100vh-5rem)]">
       {/* Conversation Thread - Pure Clean Chat Flow (NO Banners, NO Start Over) */}
-      <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 pb-4 scroll-smooth">
+      <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 pb-4 scroll-smooth no-scrollbar">
         {messages.map((msg) => {
           const isUser = msg.sender === 'user';
           return (

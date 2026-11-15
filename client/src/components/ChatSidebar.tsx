@@ -44,82 +44,83 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       />
 
       {/* DESKTOP: Dropdown Box anchored below the hamburger within the page grid */}
-      <div className="hidden md:flex fixed top-16 left-[max(1rem,calc((100vw-56rem)/2+1rem))] w-80 max-h-[70vh] bg-[#fbfaf7] rounded-[16px] flex-col z-50 overflow-hidden ring-1 ring-black/10 select-none animate-in fade-in zoom-in-95 duration-150">
-        {/* Header */}
-        <div className="p-3.5 pb-2 flex items-center justify-between border-b border-[#10393b]/5">
-          <span className="text-[10px] font-normal tracking-wider text-[#888888] uppercase">
-            Recent Requests
-          </span>
-          <button
-            onClick={() => {
-              onNewChat();
-              onClose();
-            }}
-            title="New Request"
-            className="p-1 rounded-[6px] hover:bg-[#eceae2] text-[#10393b] transition-all cursor-pointer"
-          >
-            <PlusIcon className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Chats List: Strictly ONE line per item, no subtitles */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
-          {chats.length === 0 ? (
-            <div className="py-6 text-center text-xs text-[#888888]">
-              No past requests
+      <div className="hidden md:block fixed inset-x-0 top-16 z-50 pointer-events-none">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          <div className="pointer-events-auto w-80 -ml-2 h-[60vh] bg-[#fbfaf7] rounded-[10px] flex flex-col overflow-hidden ring-1 ring-black/10 select-none origin-top-left transition-all duration-200 ease-out animate-in fade-in zoom-in-90 slide-in-from-top-2">
+            {/* Header: Recent Requests Title + Cancel/Close Button */}
+            <div className="p-3.5 pb-2.5 flex items-center justify-between border-b border-[#10393b]/5">
+              <span className="text-[10px] font-normal tracking-wider text-[#888888] uppercase">
+                Recent Requests
+              </span>
+              <button
+                onClick={onClose}
+                title="Close dropdown"
+                className="p-1 rounded-[6px] hover:bg-[#eceae2] text-[#777777] hover:text-[#10393b] transition-all cursor-pointer"
+              >
+                <XMarkIcon className="w-4 h-4" />
+              </button>
             </div>
-          ) : (
-            chats.map((c) => {
-              const isActive = c.id === activeChatId;
-              return (
-                <div
-                  key={c.id}
-                  onClick={() => {
-                    onSelectChat(c.id);
-                    onClose();
-                  }}
-                  className={`group flex items-center justify-between px-3 py-2 rounded-[8px] cursor-pointer text-xs font-normal transition-all ${
-                    isActive
-                      ? 'bg-[#10393b] text-white'
-                      : 'hover:bg-[#eceae2] text-[#10393b]'
-                  }`}
-                >
-                  <span className="truncate flex-1 pr-2">{c.title}</span>
 
-                  {!c.isLocked && c.status === 'DRAFT' && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteChat(c.id);
+            {/* Chats List: Strictly ONE line per item, hidden scrollbar */}
+            <div className="flex-1 overflow-y-auto no-scrollbar p-2.5 space-y-1">
+              {chats.length === 0 ? (
+                <div className="py-8 text-center text-xs text-[#888888]">
+                  No past requests
+                </div>
+              ) : (
+                chats.map((c) => {
+                  const isActive = c.id === activeChatId;
+                  return (
+                    <div
+                      key={c.id}
+                      onClick={() => {
+                        onSelectChat(c.id);
+                        onClose();
                       }}
-                      title="Delete draft"
-                      className={`opacity-0 group-hover:opacity-100 p-1 rounded-[4px] transition-all ${
+                      className={`group flex items-center justify-between px-3 py-2 rounded-[8px] cursor-pointer text-xs font-normal transition-all ${
                         isActive
-                          ? 'hover:bg-white/20 text-white/80'
-                          : 'hover:bg-red-50 text-red-500'
+                          ? 'bg-[#10393b] text-white'
+                          : 'hover:bg-[#eceae2] text-[#10393b]'
                       }`}
                     >
-                      <TrashIcon className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
+                      <span className="truncate flex-1 pr-2">{c.title}</span>
 
-        {/* Bottom Action */}
-        <div className="p-2.5 pt-1.5 border-t border-[#10393b]/5">
-          <button
-            onClick={() => {
-              onNewChat();
-              onClose();
-            }}
-            className="w-full h-9 rounded-[8px] bg-[#10393b] hover:bg-[#154b4d] active:bg-[#0c2a2b] text-white text-xs font-normal flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-          >
-            <PlusIcon className="w-3.5 h-3.5 shrink-0" />
-            <span>New Request</span>
-          </button>
+                      {!c.isLocked && c.status === 'DRAFT' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteChat(c.id);
+                          }}
+                          title="Delete draft"
+                          className={`opacity-0 group-hover:opacity-100 p-1 rounded-[4px] transition-all ${
+                            isActive
+                              ? 'hover:bg-white/20 text-white/80'
+                              : 'hover:bg-red-50 text-red-500'
+                          }`}
+                        >
+                          <TrashIcon className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Bottom Action: Generous padding separating list from button */}
+            <div className="p-3.5 pt-3 border-t border-[#10393b]/5 bg-[#fbfaf7]">
+              <button
+                onClick={() => {
+                  onNewChat();
+                  onClose();
+                }}
+                className="w-full h-10 rounded-[8px] bg-[#10393b] hover:bg-[#154b4d] active:bg-[#0c2a2b] text-white text-xs font-normal flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-none"
+              >
+                <PlusIcon className="w-3.5 h-3.5 shrink-0" />
+                <span>New Request</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -150,7 +151,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         </div>
 
         {/* Chats List Section: Single Line Only */}
-        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
+        <div className="flex-1 overflow-y-auto no-scrollbar px-3 py-2 space-y-0.5">
           <div className="px-3 py-1 text-[10px] font-normal tracking-wider text-[#999999] uppercase">
             Recent Requests
           </div>

@@ -39,3 +39,12 @@ button, input, select, textarea {
 ::-webkit-scrollbar-thumb:hover {
   background: #cbc8bd;
 }
+
+/* Utility to completely hide scrollbars while preserving full scrollability */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

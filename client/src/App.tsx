@@ -193,9 +193,14 @@ export function App() {
 
   const handleNewChat = () => {
     setActiveChatId(null);
+    setCurrentToken('');
     try {
       localStorage.removeItem('handular_active_chat');
       localStorage.removeItem('handular_draft_chat');
+      const url = new URL(window.location.href);
+      url.searchParams.delete('token');
+      url.searchParams.delete('view');
+      window.history.pushState({}, '', url.pathname);
     } catch {}
     setView('wizard');
   };
@@ -319,6 +324,7 @@ export function App() {
       <main className={`flex-1 ${view === 'wizard' ? 'overflow-hidden' : 'pb-24 md:pb-16'}`}>
         {view === 'wizard' && (
           <RequestWizard
+            key={activeChatId || 'new-request'}
             apiBaseUrl={API_BASE_URL}
             onRequestSubmitted={handleRequestSubmitted}
             currentUser={currentUser}
@@ -339,7 +345,7 @@ export function App() {
             token={authToken}
             user={currentUser}
             onSelectRequest={handleSelectRequestFromOrders}
-            onCreateNewRequest={() => handleSelectTab('wizard')}
+            onCreateNewRequest={handleNewChat}
           />
         )}
 

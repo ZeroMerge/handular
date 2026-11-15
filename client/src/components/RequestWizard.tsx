@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   ArrowRightIcon,
   ArrowPathIcon,
+  ChevronRightIcon,
 } from './ui/icons';
 import { StudentUser, OfferData } from '../types';
 import { Button } from './ui/button';
@@ -121,7 +122,7 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
   const [currentStep, setCurrentStep] = useState<Step>('category');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [trackingCode, setTrackingCode] = useState<string | null>(null);
+  const [_trackingCode, setTrackingCode] = useState<string | null>(null);
   const [submittedToken, setSubmittedToken] = useState<string | null>(null);
   const [offers, setOffers] = useState<OfferData[]>([]);
   const [isRefreshingOffers, setIsRefreshingOffers] = useState(false);
@@ -259,7 +260,10 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
       const draftRaw = localStorage.getItem('handular_draft_chat');
       if (draftRaw) {
         const draft: DraftChatData = JSON.parse(draftRaw);
-        if (draft.messages && draft.messages.length > 2) {
+        // If the draft was completed or already linked to a backend chat, discard it so it does not block a new request
+        if (draft.currentStep === 'completed' || draft.chatId) {
+          localStorage.removeItem('handular_draft_chat');
+        } else if (draft.messages && draft.messages.length > 2) {
           setMessages(draft.messages);
           if (draft.category) setCategory(draft.category);
           if (draft.brand) setBrand(draft.brand);
@@ -274,9 +278,20 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
       }
     } catch {}
 
-    // Fresh new chat: initialize with greeting and prompt immediately
-    setMessages(createInitialMessages(firstName));
+    // Fresh new chat: clean all request tokens and start completely fresh
+    setSubmittedToken(null);
+    setTrackingCode(null);
+    setOffers([]);
+    setCategory('LAPTOPS');
+    setBrand('Apple MacBook');
+    setUseCase('Coding & Tech');
+    setMaxBudget(400000);
+    setBudgetInput('');
+    setBudgetError(null);
+    setSelectedSpecs([]);
+    setCustomNotes('');
     setCurrentStep('category');
+    setMessages(createInitialMessages(firstName));
     setIsBotTyping(false);
   }, [activeChatId, firstName, apiBaseUrl]);
 
@@ -769,26 +784,27 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
         {/* STEP 7: Completed State / Live In-Chat Offers */}
         {currentStep === 'completed' && submittedToken && (
           <div className="my-3 pl-8 space-y-3 animate-in fade-in duration-200">
-            <div className="p-4 rounded-[14px] bg-white flex items-center justify-between">
+            {/* Sourcing Status Header: Clean, balanced spacing */}
+            <div className="p-4 rounded-[14px] bg-white flex items-center justify-between gap-3">
               <div>
-                <span className="text-[11px] font-normal text-[#888888] block">Tracking Code</span>
-                <span className="font-mono text-sm text-[#10393b] font-medium">
-                  {trackingCode || `#${submittedToken}`}
+                <span className="text-[11px] font-normal text-[#888888] block mb-0.5">
+                  Current Status
                 </span>
-              </div>
-              <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-xs font-normal bg-[#10393b] text-[#ffad24]">
                   Sourcing Sellers
                 </span>
-                <button
-                  onClick={() => fetchOffers(submittedToken)}
-                  disabled={isRefreshingOffers}
-                  title="Refresh offers"
-                  className="p-1.5 rounded-[8px] hover:bg-[#eceae2] text-[#10393b] transition-all cursor-pointer disabled:opacity-80"
-                >
-                  <ArrowPathIcon className={`w-3.5 h-3.5 shrink-0 transition-transform ${isRefreshingOffers ? 'animate-spin-smooth' : ''}`} />
-                </button>
               </div>
+
+              {/* Refresh button to see recent offers */}
+              <button
+                onClick={() => fetchOffers(submittedToken)}
+                disabled={isRefreshingOffers}
+                title="See recent offers"
+                className="h-8 px-3 rounded-[8px] bg-[#eceae2] hover:bg-[#e4e1d7] text-[#10393b] text-xs font-normal flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-70"
+              >
+                <ArrowPathIcon className={`w-3.5 h-3.5 shrink-0 transition-transform ${isRefreshingOffers ? 'animate-spin-smooth' : ''}`} />
+                <span>Refresh Offers</span>
+              </button>
             </div>
 
             {/* In-Chat Offers List */}
@@ -822,8 +838,10 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
                       variant="primary"
                       size="sm"
                       onClick={() => onRequestSubmitted(submittedToken)}
+                      className="flex items-center gap-1"
                     >
-                      View Details
+                      <span>View Details</span>
+                      <ChevronRightIcon className="w-3.5 h-3.5" />
                     </Button>
                   </div>
                 ))}

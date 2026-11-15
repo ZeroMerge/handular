@@ -44,8 +44,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       />
 
       {/* DESKTOP: Dropdown Box anchored below the hamburger within the page grid */}
-      <div className="hidden md:block fixed inset-x-0 top-16 z-50 pointer-events-none">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+      <div className="hidden md:block fixed inset-x-0 top-16 z-50 pointer-events-none px-4 sm:px-6">
+        <div className="w-full max-w-4xl mx-auto">
           <div className="pointer-events-auto w-80 -ml-2 h-[60vh] bg-[#fbfaf7] rounded-[10px] flex flex-col overflow-hidden ring-1 ring-black/10 select-none origin-top-left transition-all duration-200 ease-out animate-in fade-in zoom-in-90 slide-in-from-top-2">
             {/* Header: Recent Requests Title + Cancel/Close Button */}
             <div className="p-3.5 pb-2.5 flex items-center justify-between border-b border-[#10393b]/5">
@@ -79,8 +79,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                       }}
                       className={`group flex items-center justify-between px-3 py-2 rounded-[8px] cursor-pointer text-xs transition-all ${
                         isActive
-                          ? 'bg-[#10393b]/10 text-[#10393b] font-medium'
-                          : 'hover:bg-[#eceae2] text-[#10393b]/80 font-normal'
+                          ? 'bg-black/10 text-[#0f2d2e] font-medium'
+                          : 'hover:bg-[#eceae2] text-[#10393b]/75 hover:text-[#10393b] font-normal'
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
@@ -176,8 +176,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                     }}
                     className={`group flex items-center justify-between px-3 py-2.5 rounded-[10px] cursor-pointer text-xs transition-all ${
                       isActive
-                        ? 'bg-[#10393b]/10 text-[#10393b] font-medium'
-                        : 'hover:bg-[#eceae2] text-[#10393b]/80 font-normal'
+                        ? 'bg-black/10 text-[#0f2d2e] font-medium'
+                        : 'hover:bg-[#eceae2] text-[#10393b]/75 hover:text-[#10393b] font-normal'
                     }`}
                   >
                     <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">

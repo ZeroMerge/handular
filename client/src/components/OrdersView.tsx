@@ -110,10 +110,20 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       </div>
 
       {/* Table View with Small Background Gap - ZERO BORDERS, ZERO SHADOWS */}
-      {loading && requests.length === 0 ? (
-        <div className="py-16 text-center text-xs text-[#888888]">
-          <div className="w-6 h-6 border-2 border-[#10393b]/20 border-t-[#10393b] rounded-full animate-spin mx-auto mb-2" />
-          Loading your orders...
+      {isRefreshing || (loading && requests.length === 0) ? (
+        <div className="py-16 text-center rounded-[14px] p-8 bg-white/70 space-y-4 animate-in fade-in duration-200">
+          <div className="w-8 h-8 border-[3px] border-[#10393b]/15 border-t-[#10393b] rounded-full animate-spin mx-auto" />
+          <div className="space-y-1">
+            <h3 className="text-sm font-medium text-[#10393b]">Updating Orders</h3>
+            <p className="text-xs text-[#777777] font-normal">
+              Checking campus sellers and syncing your live matches...
+            </p>
+          </div>
+          {/* Skeleton preview rows */}
+          <div className="pt-2 space-y-2 max-w-lg mx-auto">
+            <div className="h-11 rounded-[8px] bg-[#10393b]/5 animate-pulse" />
+            <div className="h-11 rounded-[8px] bg-[#10393b]/5 animate-pulse [animation-delay:150ms]" />
+          </div>
         </div>
       ) : requests.length === 0 ? (
         <div className="py-16 text-center rounded-[14px] p-6 bg-white">

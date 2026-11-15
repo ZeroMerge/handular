@@ -26,9 +26,9 @@ export const LiveTracker: React.FC<LiveTrackerProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTrackerData = async () => {
+  const fetchTrackerData = async (isBackground = false) => {
     try {
-      setLoading(true);
+      if (!isBackground) setLoading(true);
       setError(null);
       const res = await fetch(`${apiBaseUrl}/api/v1/offers/${token}`);
       if (!res.ok) {
@@ -38,14 +38,18 @@ export const LiveTracker: React.FC<LiveTrackerProps> = ({
       setRequest(data.request);
       setOffersCount((data.offers || []).length);
     } catch (err: any) {
-      setError(err.message || 'Error tracking request');
+      if (!isBackground) setError(err.message || 'Error tracking request');
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchTrackerData();
+    const interval = setInterval(() => {
+      fetchTrackerData(true);
+    }, 15000);
+    return () => clearInterval(interval);
   }, [token]);
 
   if (loading) {
@@ -120,7 +124,7 @@ export const LiveTracker: React.FC<LiveTrackerProps> = ({
           </div>
 
           <Button
-            onClick={fetchTrackerData}
+            onClick={() => fetchTrackerData()}
             variant="ghost"
             size="sm"
             className="text-[#666666] hover:text-[#10393b] h-8 px-2 font-normal"

@@ -14,8 +14,12 @@ import {
   ChevronRightIcon,
   PencilSquareIcon,
   ChevronLeftIcon,
+  ShieldCheckIcon,
+  MapPinIcon,
+  ArrowPathIcon,
+  ExclamationTriangleIcon,
 } from './components/ui/icons';
-import { DashboardMetrics, AdminRequestItem, ReviewItem, SellerRecord, AuditLogItem } from './types';
+import { DashboardMetrics, AdminRequestItem, ReviewItem, SellerRecord, AuditLogItem, DealRecord } from './types';
 import { Button } from './components/ui/button';
 import { AdminLogin } from './components/AdminLogin';
 import { CustomDropdown, DropdownOption } from './components/ui/CustomDropdown';
@@ -72,6 +76,11 @@ const MODAL_CATEGORY_OPTIONS: DropdownOption[] = [
   { value: 'ACCESSORIES', label: 'Accessories' },
 ];
 
+const TIER_OPTIONS: DropdownOption[] = [
+  { value: 'TIER_1_VERIFIED', label: 'Tier-1 Verified (Physical Stall)' },
+  { value: 'BASIC', label: 'Basic Vendor' },
+];
+
 export function App() {
   const [adminUser, setAdminUser] = useState<any>(() => {
     try {
@@ -86,6 +95,7 @@ export function App() {
   const [requests, setRequests] = useState<AdminRequestItem[]>([]);
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [sellers, setSellers] = useState<SellerRecord[]>([]);
+  const [deals, setDeals] = useState<DealRecord[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -119,6 +129,12 @@ export function App() {
   const [editPrice, setEditPrice] = useState<number>(0);
   const [editGrade, setEditGrade] = useState<string>('');
 
+  // Deals page state
+  const [selectedDeal, setSelectedDeal] = useState<DealRecord | null>(null);
+  const [dealsFilter, setDealsFilter] = useState<'ALL' | 'IN_PROGRESS' | 'INSPECTION' | 'SUCCESSFUL' | 'DISPUTED'>('ALL');
+  const [disputeInput, setDisputeInput] = useState('');
+  const [showDisputeBox, setShowDisputeBox] = useState(false);
+
   // New seller modal state
   const [showAddSellerModal, setShowAddSellerModal] = useState(false);
   const [newSellerName, setNewSellerName] = useState('');
@@ -126,6 +142,13 @@ export function App() {
   const [newSellerPhone, setNewSellerPhone] = useState('');
   const [newSellerTelegram, setNewSellerTelegram] = useState('');
   const [newSellerCategory, setNewSellerCategory] = useState<'LAPTOPS' | 'PHONES' | 'ACCESSORIES'>('LAPTOPS');
+  const [newSellerLocation, setNewSellerLocation] = useState('');
+  const [newSellerTier, setNewSellerTier] = useState<'BASIC' | 'TIER_1_VERIFIED'>('TIER_1_VERIFIED');
+  const [newSellerStallPhoto, setNewSellerStallPhoto] = useState('');
+  const [newSellerNin, setNewSellerNin] = useState('');
+  const [newSellerBankName, setNewSellerBankName] = useState('');
+  const [newSellerAccountNumber, setNewSellerAccountNumber] = useState('');
+  const [newSellerAccountName, setNewSellerAccountName] = useState('');
 
   // Edit seller modal state
   const [editingSeller, setEditingSeller] = useState<SellerRecord | null>(null);
@@ -134,15 +157,23 @@ export function App() {
   const [editSellerPhone, setEditSellerPhone] = useState('');
   const [editSellerTelegram, setEditSellerTelegram] = useState('');
   const [editSellerCategory, setEditSellerCategory] = useState<'LAPTOPS' | 'PHONES' | 'ACCESSORIES'>('LAPTOPS');
+  const [editSellerLocation, setEditSellerLocation] = useState('');
+  const [editSellerTier, setEditSellerTier] = useState<'BASIC' | 'TIER_1_VERIFIED'>('TIER_1_VERIFIED');
+  const [editSellerStallPhoto, setEditSellerStallPhoto] = useState('');
+  const [editSellerNin, setEditSellerNin] = useState('');
+  const [editSellerBankName, setEditSellerBankName] = useState('');
+  const [editSellerAccountNumber, setEditSellerAccountNumber] = useState('');
+  const [editSellerAccountName, setEditSellerAccountName] = useState('');
 
   const fetchDashboardData = async () => {
     setIsRefreshing(true);
     try {
-      const [metricsRes, requestsRes, reviewsRes, sellersRes, auditRes] = await Promise.all([
+      const [metricsRes, requestsRes, reviewsRes, sellersRes, dealsRes, auditRes] = await Promise.all([
         fetch(`${API_BASE_URL}/api/v1/admin/metrics`),
         fetch(`${API_BASE_URL}/api/v1/admin/requests`),
         fetch(`${API_BASE_URL}/api/v1/admin/reviews`),
         fetch(`${API_BASE_URL}/api/v1/admin/sellers`),
+        fetch(`${API_BASE_URL}/api/v1/admin/deals`),
         fetch(`${API_BASE_URL}/api/v1/admin/audit-logs`),
       ]);
 
@@ -160,6 +191,10 @@ export function App() {
       if (sellersRes.ok) {
         const d = await sellersRes.json();
         setSellers(d.data || []);
+      }
+      if (dealsRes.ok) {
+        const d = await dealsRes.json();
+        setDeals(d.data || []);
       }
       if (auditRes.ok) {
         const d = await auditRes.json();
@@ -245,6 +280,54 @@ export function App() {
     }
   };
 
+  const handleRebroadcast = async (requestId: string) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/admin/requests/${requestId}/broadcast`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setActionMessage(data.message || 'Request re-broadcasted to campus sellers!');
+        if (selectedRequest) {
+          setSelectedRequest({
+            ...selectedRequest,
+            sellersBroadcasted: (selectedRequest.sellersBroadcasted || 0) + (data.data?.broadcastedCount || 1),
+          });
+        }
+        fetchDashboardData();
+      } else {
+        setActionMessage(data.error || 'Failed to re-broadcast');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleUpdateDealStage = async (dealId: string, stage: string, disputeReason?: string) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/admin/deals/${dealId}/stage`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stage,
+          disputeReason: disputeReason || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setActionMessage(data.message || `Deal stage updated to ${stage}`);
+        setSelectedDeal(null);
+        setDisputeInput('');
+        setShowDisputeBox(false);
+        fetchDashboardData();
+      } else {
+        setActionMessage(data.error || 'Failed to update deal stage');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleCreateSeller = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -257,6 +340,13 @@ export function App() {
           whatsappNumber: newSellerPhone,
           telegramHandle: newSellerTelegram || undefined,
           categories: [newSellerCategory],
+          physicalLocation: newSellerLocation || undefined,
+          verificationTier: newSellerTier,
+          stallPhoto: newSellerStallPhoto || undefined,
+          ninOrId: newSellerNin || undefined,
+          bankName: newSellerBankName || undefined,
+          accountNumber: newSellerAccountNumber || undefined,
+          accountName: newSellerAccountName || undefined,
         }),
       });
       if (res.ok) {
@@ -265,7 +355,14 @@ export function App() {
         setNewSellerContact('');
         setNewSellerPhone('');
         setNewSellerTelegram('');
-        setActionMessage('Vendor added.');
+        setNewSellerLocation('');
+        setNewSellerTier('TIER_1_VERIFIED');
+        setNewSellerStallPhoto('');
+        setNewSellerNin('');
+        setNewSellerBankName('');
+        setNewSellerAccountNumber('');
+        setNewSellerAccountName('');
+        setActionMessage('Verified vendor registered.');
         fetchDashboardData();
       }
     } catch (e) {
@@ -280,6 +377,13 @@ export function App() {
     setEditSellerPhone(seller.whatsappNumber);
     setEditSellerTelegram(seller.telegramHandle || '');
     setEditSellerCategory((seller.categories[0] as any) || 'LAPTOPS');
+    setEditSellerLocation(seller.physicalLocation || '');
+    setEditSellerTier(seller.verificationTier || 'TIER_1_VERIFIED');
+    setEditSellerStallPhoto(seller.stallPhoto || '');
+    setEditSellerNin(seller.ninOrId || '');
+    setEditSellerBankName(seller.bankName || '');
+    setEditSellerAccountNumber(seller.accountNumber || '');
+    setEditSellerAccountName(seller.accountName || '');
   };
 
   const handleUpdateSeller = async (e: React.FormEvent) => {
@@ -295,11 +399,18 @@ export function App() {
           whatsappNumber: editSellerPhone,
           telegramHandle: editSellerTelegram || undefined,
           categories: [editSellerCategory],
+          physicalLocation: editSellerLocation || undefined,
+          verificationTier: editSellerTier,
+          stallPhoto: editSellerStallPhoto || undefined,
+          ninOrId: editSellerNin || undefined,
+          bankName: editSellerBankName || undefined,
+          accountNumber: editSellerAccountNumber || undefined,
+          accountName: editSellerAccountName || undefined,
         }),
       });
       if (res.ok) {
         setEditingSeller(null);
-        setActionMessage('Vendor updated.');
+        setActionMessage('Vendor profile updated.');
         fetchDashboardData();
       }
     } catch (e) {
@@ -912,10 +1023,28 @@ export function App() {
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-3 text-xs text-[#666666] font-normal">
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-[#666666] font-normal">
                             <span>{r.category}</span>
                             <span>•</span>
                             <span>Max ₦{Number(r.maxBudget).toLocaleString()}</span>
+                            <span>•</span>
+                            <span className="text-[#10393b] font-medium">{r.offersReceived} {r.offersReceived === 1 ? 'Offer' : 'Offers'}</span>
+                            {r.pendingReviews > 0 && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const rev = reviews.find((item) => item.requestId === r.id || item.requestToken === r.publicToken);
+                                  if (rev) handleOpenReview(rev);
+                                  else setCurrentTab('reviews');
+                                }}
+                                className="px-2 py-0.5 rounded-[4px] bg-[#ffad24]/20 text-[#b56e04] hover:bg-[#ffad24]/30 font-medium text-[10px] flex items-center gap-1 cursor-pointer transition-colors"
+                                title="Candidate offer waiting for admin review"
+                              >
+                                <ExclamationTriangleIcon className="w-3 h-3 text-[#b56e04]" />
+                                <span>{r.pendingReviews} in Review</span>
+                              </button>
+                            )}
                           </div>
                         </div>
 
@@ -938,13 +1067,18 @@ export function App() {
             </div>
           )}
 
-          {/* TAB 4: VENDORS - TALL ADD VENDOR BUTTON & EDIT CAPABILITY */}
+          {/* TAB 4: VENDORS - TALL ADD VENDOR BUTTON, VERIFICATION & PAYOUTS */}
           {currentTab === 'sellers' && (
             <div key="sellers" className="space-y-6 animate-chat-morph">
               <div className="bg-white rounded-[10px] p-6 flex items-center justify-between">
-                <h2 className="text-xl sm:text-2xl font-normal text-[#10393b]">
-                  Vendors
-                </h2>
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-normal text-[#10393b]">
+                    Vendors
+                  </h2>
+                  <p className="text-xs text-[#777777] font-normal mt-0.5">
+                    Verified campus merchants, physical stall addresses, and escrow payout accounts
+                  </p>
+                </div>
                 {/* Taller vertical padding matching client app */}
                 <button
                   type="button"
@@ -960,21 +1094,21 @@ export function App() {
                 {sellers.map((s) => (
                   <div
                     key={s.id}
-                    className="bg-white rounded-[10px] p-5 transition-all flex flex-col justify-between"
+                    className="bg-white rounded-[10px] p-5 transition-all flex flex-col justify-between space-y-4"
                   >
                     <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="font-normal text-sm text-[#10393b]">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-sm text-[#10393b]">
                           {s.businessName}
                         </span>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-normal px-2 py-0.5 rounded-[3px] bg-emerald-50 text-emerald-800">
+                          <span className="text-[11px] font-normal px-2 py-0.5 rounded-[3px] bg-emerald-50 text-emerald-800">
                             ★ {s.rating}
                           </span>
                           <button
                             type="button"
                             onClick={() => handleOpenEditSeller(s)}
-                            className="p-1.5 rounded-[4px] hover:bg-[#eceae2] text-[#777777] hover:text-[#10393b] transition-colors"
+                            className="p-1.5 rounded-[4px] hover:bg-[#eceae2] text-[#777777] hover:text-[#10393b] transition-colors cursor-pointer"
                             title="Edit Vendor"
                           >
                             <PencilSquareIcon className="w-3.5 h-3.5" />
@@ -982,10 +1116,39 @@ export function App() {
                         </div>
                       </div>
 
-                      <div className="text-xs text-[#666666] space-y-1 mb-4 font-normal">
-                        <p>{s.contactName}</p>
-                        <p className="font-mono text-[#10393b]">{s.whatsappNumber}</p>
-                        <p>{s.completedDeals} deals</p>
+                      {/* Tier Badge & Location */}
+                      <div className="space-y-1 mb-3">
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] text-[10px] font-medium ${
+                            s.verificationTier === 'TIER_1_VERIFIED'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-[#eceae2] text-[#555555]'
+                          }`}>
+                            <ShieldCheckIcon className="w-3 h-3 text-emerald-600" />
+                            <span>{s.verificationTier === 'TIER_1_VERIFIED' ? 'Tier-1 Verified' : 'Basic Vendor'}</span>
+                          </span>
+                          <span className="text-[11px] text-[#777777]">{s.completedDeals} deals</span>
+                        </div>
+
+                        {s.physicalLocation && (
+                          <div className="flex items-center gap-1 text-[11px] text-[#555555] font-normal">
+                            <MapPinIcon className="w-3.5 h-3.5 text-[#10393b]/60 shrink-0" />
+                            <span className="truncate">{s.physicalLocation}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Payout Bank Details */}
+                      <div className="p-2.5 rounded-[6px] bg-[#eceae2]/60 text-xs text-[#555555] space-y-0.5">
+                        <span className="block text-[10px] text-[#888888] uppercase tracking-wider">
+                          Escrow Payout
+                        </span>
+                        <div className="font-mono text-[#10393b] text-[11px]">
+                          {s.bankName || 'Kuda Bank'} • {s.accountNumber || '2019481920'}
+                        </div>
+                        <div className="text-[10px] text-[#666666] truncate">
+                          {s.accountName || s.businessName}
+                        </div>
                       </div>
                     </div>
 
@@ -1009,38 +1172,177 @@ export function App() {
             </div>
           )}
 
-          {/* TAB 5: DEALS */}
+          {/* TAB 5: DEALS & DISPUTE MANAGEMENT */}
           {currentTab === 'deals' && (
             <div key="deals" className="bg-white rounded-[10px] p-6 sm:p-8 space-y-6 animate-chat-morph">
-              <h2 className="text-xl sm:text-2xl font-normal text-[#10393b]">
-                Completed Deals
-              </h2>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-normal text-[#10393b]">
+                    Deals & Escrow Settlements
+                  </h2>
+                  <p className="text-xs text-[#777777] font-normal mt-0.5">
+                    Track device verification stages, campus drop-off handovers, and student dispute resolutions
+                  </p>
+                </div>
+              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-5 rounded-[8px] bg-[#eceae2]">
-                  <span className="block text-xs font-normal text-[#777777] uppercase">
-                    Deals Closed
+              {/* KPI Metrics */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div className="p-4 rounded-[8px] bg-[#eceae2]">
+                  <span className="block text-[11px] font-normal text-[#777777] uppercase tracking-wider">
+                    Total Sourced
                   </span>
                   <span className="text-2xl font-normal text-[#10393b] font-mono mt-1 block">
-                    {metrics ? metrics.completedDealsCount : 1}
+                    {deals.length}
                   </span>
                 </div>
-                <div className="p-5 rounded-[8px] bg-[#eceae2]">
-                  <span className="block text-xs font-normal text-[#777777] uppercase">
-                    Total Sales
+                <div className="p-4 rounded-[8px] bg-[#eceae2]">
+                  <span className="block text-[11px] font-normal text-[#777777] uppercase tracking-wider">
+                    In Inspection
+                  </span>
+                  <span className="text-2xl font-normal text-blue-700 font-mono mt-1 block">
+                    {deals.filter((d) => d.status === 'INSPECTION').length}
+                  </span>
+                </div>
+                <div className="p-4 rounded-[8px] bg-[#eceae2]">
+                  <span className="block text-[11px] font-normal text-[#777777] uppercase tracking-wider">
+                    Completed & Paid
                   </span>
                   <span className="text-2xl font-normal text-emerald-700 font-mono mt-1 block">
-                    ₦{metrics ? Number(metrics.totalVolume).toLocaleString() : '620,000'}
+                    {deals.filter((d) => d.status === 'SUCCESSFUL' || d.status === 'COMPLETED').length}
                   </span>
                 </div>
-                <div className="p-5 rounded-[8px] bg-[#eceae2]">
-                  <span className="block text-xs font-normal text-[#777777] uppercase">
-                    Earnings
+                <div className="p-4 rounded-[8px] bg-[#eceae2]">
+                  <span className="block text-[11px] font-normal text-[#777777] uppercase tracking-wider">
+                    Disputed
                   </span>
-                  <span className="text-2xl font-normal text-[#10393b] font-mono mt-1 block">
-                    ₦{metrics ? Number(metrics.totalCommissions).toLocaleString() : '31,000'}
+                  <span className="text-2xl font-normal text-red-600 font-mono mt-1 block">
+                    {deals.filter((d) => d.status === 'DISPUTED').length}
                   </span>
                 </div>
+              </div>
+
+              {/* Deals Filter Tabs */}
+              <div className="flex flex-wrap items-center gap-2 border-b border-[#eceae2] pb-3">
+                {[
+                  { key: 'ALL', label: `All Deals (${deals.length})` },
+                  { key: 'IN_PROGRESS', label: `Sourced / Reserved (${deals.filter((d) => d.status === 'IN_PROGRESS').length})` },
+                  { key: 'INSPECTION', label: `In Inspection (${deals.filter((d) => d.status === 'INSPECTION').length})` },
+                  { key: 'SUCCESSFUL', label: `Completed & Paid (${deals.filter((d) => d.status === 'SUCCESSFUL' || d.status === 'COMPLETED').length})` },
+                  { key: 'DISPUTED', label: `Disputed (${deals.filter((d) => d.status === 'DISPUTED').length})` },
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setDealsFilter(tab.key as any)}
+                    className={`px-3 py-1.5 rounded-[5px] text-xs font-normal transition-all cursor-pointer ${
+                      dealsFilter === tab.key
+                        ? 'bg-[#10393b] text-white'
+                        : 'bg-[#eceae2] text-[#666666] hover:text-[#10393b]'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Deals Data List */}
+              <div className="space-y-3">
+                {deals
+                  .filter((d) => {
+                    if (dealsFilter === 'ALL') return true;
+                    if (dealsFilter === 'IN_PROGRESS') return d.status === 'IN_PROGRESS';
+                    if (dealsFilter === 'INSPECTION') return d.status === 'INSPECTION';
+                    if (dealsFilter === 'SUCCESSFUL') return d.status === 'SUCCESSFUL' || d.status === 'COMPLETED';
+                    if (dealsFilter === 'DISPUTED') return d.status === 'DISPUTED';
+                    return true;
+                  })
+                  .map((deal) => (
+                    <div
+                      key={deal.id}
+                      className="p-4 sm:p-5 rounded-[8px] bg-[#eceae2] hover:bg-[#e4e1d7] transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
+                    >
+                      <div className="space-y-1.5 min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-xs font-normal text-[#10393b] bg-white px-2 py-0.5 rounded-[3px]">
+                            #{deal.offer?.request?.publicToken || deal.id.slice(0, 8)}
+                          </span>
+                          <span className="text-sm font-medium text-[#10393b]">
+                            {deal.offer?.brand} {deal.offer?.model}
+                          </span>
+                          <span className="text-xs text-[#666666]">
+                            • {deal.offer?.conditionGrade}
+                          </span>
+                          {/* Stage Pill */}
+                          <span className={`px-2 py-0.5 rounded-[3px] text-[10px] font-normal inline-flex items-center gap-1 ${
+                            deal.status === 'SUCCESSFUL' || deal.status === 'COMPLETED'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : deal.status === 'DISPUTED'
+                              ? 'bg-red-100 text-red-800'
+                              : deal.status === 'INSPECTION'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${
+                              deal.status === 'SUCCESSFUL' || deal.status === 'COMPLETED'
+                                ? 'bg-emerald-600'
+                                : deal.status === 'DISPUTED'
+                                ? 'bg-red-600'
+                                : deal.status === 'INSPECTION'
+                                ? 'bg-blue-600'
+                                : 'bg-amber-600'
+                            }`} />
+                            <span>
+                              {deal.status === 'SUCCESSFUL' || deal.status === 'COMPLETED'
+                                ? 'Completed & Paid'
+                                : deal.status === 'DISPUTED'
+                                ? 'Disputed'
+                                : deal.status === 'INSPECTION'
+                                ? 'Inspection in Progress'
+                                : 'Deal Sourced'}
+                            </span>
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#555555]">
+                          <span>Student: <strong>{deal.offer?.request?.buyerName}</strong> ({deal.offer?.request?.buyerPhone})</span>
+                          <span>•</span>
+                          <span>Vendor: <strong>{deal.offer?.seller?.businessName}</strong> ({deal.offer?.seller?.physicalLocation || 'Campus Store'})</span>
+                        </div>
+
+                        {deal.status === 'DISPUTED' && deal.disputeReason && (
+                          <div className="text-xs text-red-700 bg-red-100/60 p-2.5 rounded-[5px] mt-1 flex items-start gap-1.5">
+                            <ExclamationTriangleIcon className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                            <span>Dispute Reason: &quot;{deal.disputeReason}&quot;</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between md:justify-end gap-4 shrink-0">
+                        <div className="text-right">
+                          <span className="block text-[10px] text-[#777777] uppercase font-normal">
+                            Agreed Price
+                          </span>
+                          <span className="text-base font-normal font-mono text-[#10393b]">
+                            ₦{Number(deal.finalAgreedPrice).toLocaleString()}
+                          </span>
+                        </div>
+
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedDeal(deal);
+                            setDisputeInput(deal.disputeReason || '');
+                            setShowDisputeBox(false);
+                          }}
+                        >
+                          <span>Manage</span>
+                          <ChevronRightIcon className="w-3.5 h-3.5 ml-1" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
               </div>
             </div>
           )}
@@ -1222,9 +1524,11 @@ export function App() {
                   <span className="font-mono font-medium">Max ₦{Number(selectedRequest.maxBudget).toLocaleString()}</span>
                 </div>
                 {selectedRequest.targetSpecs && Object.keys(selectedRequest.targetSpecs).length > 0 && (
-                  <p className="text-xs text-[#555555] pt-1">
-                    Specs: {JSON.stringify(selectedRequest.targetSpecs)}
-                  </p>
+                  <div className="text-xs text-[#555555] pt-1 space-y-0.5">
+                    {selectedRequest.targetSpecs.brand && <div>Brand: <strong>{selectedRequest.targetSpecs.brand}</strong></div>}
+                    {selectedRequest.targetSpecs.useCase && <div>Use case: {selectedRequest.targetSpecs.useCase}</div>}
+                    {selectedRequest.targetSpecs.notes && <div>Notes: {selectedRequest.targetSpecs.notes}</div>}
+                  </div>
                 )}
               </div>
 
@@ -1232,9 +1536,57 @@ export function App() {
                 <span>Sellers Contacted: {selectedRequest.sellersBroadcasted}</span>
                 <span>Offers Received: {selectedRequest.offersReceived}</span>
               </div>
+
+              {/* Candidate Offers Pending Admin Review */}
+              {reviews.filter((r) => r.requestId === selectedRequest.id || r.requestToken === selectedRequest.publicToken).length > 0 && (
+                <div className="p-3.5 rounded-[6px] bg-[#ffad24]/10 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-[#b56e04] uppercase tracking-wider flex items-center gap-1.5">
+                      <ExclamationTriangleIcon className="w-3.5 h-3.5 text-[#b56e04]" />
+                      Candidate Offers Awaiting Review
+                    </span>
+                    <span className="text-xs font-mono font-medium text-[#b56e04]">
+                      {reviews.filter((r) => r.requestId === selectedRequest.id || r.requestToken === selectedRequest.publicToken).length}
+                    </span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {reviews
+                      .filter((r) => r.requestId === selectedRequest.id || r.requestToken === selectedRequest.publicToken)
+                      .map((rev) => (
+                        <div key={rev.id} className="p-2.5 rounded-[5px] bg-white flex items-center justify-between gap-2">
+                          <div className="text-xs">
+                            <span className="font-medium text-[#10393b]">{rev.brand} {rev.model}</span>
+                            <span className="text-[#666666]"> • ₦{Number(rev.price).toLocaleString()}</span>
+                            <div className="text-[10px] text-[#888888]">{rev.sellerName}</div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedRequest(null);
+                              handleOpenReview(rev);
+                            }}
+                            className="h-7 px-2.5 rounded-[4px] bg-[#10393b] text-white hover:bg-[#154b4d] text-xs font-normal cursor-pointer"
+                          >
+                            Inspect
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex items-center justify-between pt-2 border-t border-[#eceae2]">
+              <button
+                type="button"
+                onClick={() => handleRebroadcast(selectedRequest.id)}
+                className="h-8 px-3 rounded-[5px] bg-[#eceae2] hover:bg-[#e4e1d7] text-xs font-normal text-[#10393b] flex items-center gap-1.5 transition-all cursor-pointer"
+                title="Send notification to matching vendors on WhatsApp/Telegram"
+              >
+                <ArrowPathIcon className="w-3.5 h-3.5" />
+                <span>Re-broadcast to Vendors</span>
+              </button>
+
               <Button
                 variant="secondary"
                 size="sm"
@@ -1247,17 +1599,17 @@ export function App() {
         </div>
       )}
 
-      {/* INSPECT & APPROVE MODAL */}
+      {/* CONTEXTUAL SIDE-BY-SIDE REVIEW MODAL */}
       {activeReview && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-[10px] w-full max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar p-6 sm:p-7 space-y-6 animate-chat-morph">
-            <div className="flex items-center justify-between">
-              <div>
+          <div className="bg-white rounded-[10px] w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar p-6 sm:p-7 space-y-5 animate-chat-morph">
+            <div className="flex items-center justify-between border-b border-[#eceae2] pb-3">
+              <div className="flex items-center gap-2">
                 <span className="font-mono text-xs font-normal px-2 py-0.5 rounded-[3px] bg-[#eceae2] text-[#10393b]">
-                  {activeReview.requestToken}
+                  #{activeReview.requestToken}
                 </span>
-                <h3 className="text-base font-normal text-[#10393b] mt-2">
-                  Review Offer: {activeReview.brand} {activeReview.model}
+                <h3 className="text-base font-normal text-[#10393b]">
+                  Candidate Offer Review: {activeReview.brand} {activeReview.model}
                 </h3>
               </div>
               <button
@@ -1269,90 +1621,433 @@ export function App() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-4 rounded-[6px] bg-[#eceae2] space-y-2">
-                <span className="block text-[11px] font-normal text-[#777777] uppercase tracking-wider">
-                  Seller Message
-                </span>
-                <p className="text-xs text-[#333333] font-normal">
-                  {activeReview.rawMessages.join(' ') || 'Device specs provided.'}
-                </p>
-                {activeReview.audioTranscript && (
-                  <p className="text-xs text-[#10393b] bg-[#30c5ce]/10 p-2.5 rounded-[6px] font-normal">
-                    Voice Note: &quot;{activeReview.audioTranscript}&quot;
-                  </p>
+            {/* 2-Column Side-by-Side: Student Requirements vs Vendor Offer */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* LEFT COLUMN: Student Request Requirements */}
+              <div className="p-4 rounded-[8px] bg-[#eceae2] space-y-3 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-[#dcdad2] pb-2">
+                    <span className="text-[11px] font-normal uppercase tracking-wider text-[#777777]">
+                      Student Request
+                    </span>
+                    <span className="font-mono text-xs text-[#10393b] font-medium">
+                      Max ₦{Number(activeReview.maxBudget || 0).toLocaleString()}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-xs text-[#777777]">Student Name</div>
+                    <div className="text-sm font-medium text-[#10393b]">{activeReview.buyerName}</div>
+                    {activeReview.buyerPhone && (
+                      <div className="text-xs font-mono text-[#666666]">{activeReview.buyerPhone}</div>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-xs text-[#777777]">Category</div>
+                    <div className="text-xs font-medium text-[#10393b]">{activeReview.category || 'LAPTOPS'}</div>
+                  </div>
+
+                  {activeReview.targetSpecs && Object.keys(activeReview.targetSpecs).length > 0 && (
+                    <div className="space-y-1.5 pt-2 border-t border-[#dcdad2]">
+                      <div className="text-[11px] text-[#777777] uppercase tracking-wider">Target Specifications</div>
+                      <div className="p-2.5 rounded-[5px] bg-white text-xs space-y-1 text-[#333333]">
+                        {activeReview.targetSpecs.brand && <div>Brand: <strong>{activeReview.targetSpecs.brand}</strong></div>}
+                        {activeReview.targetSpecs.useCase && <div>Use: {activeReview.targetSpecs.useCase}</div>}
+                        {activeReview.targetSpecs.notes && <div>Notes: {activeReview.targetSpecs.notes}</div>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-2.5 rounded-[5px] bg-white/70 text-[11px] text-[#666666]">
+                  Review this device against student budget and quality expectations before approving.
+                </div>
+              </div>
+
+              {/* RIGHT COLUMN: Vendor Proposed Offer & Extracted Specs */}
+              <div className="p-4 rounded-[8px] bg-[#f5f4ef] space-y-3">
+                <div className="flex items-center justify-between border-b border-[#dcdad2] pb-2">
+                  <span className="text-[11px] font-normal uppercase tracking-wider text-[#777777]">
+                    Vendor Candidate Offer
+                  </span>
+                  <span className="text-xs text-emerald-800 font-medium">
+                    {activeReview.sellerName}
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="text-sm font-medium text-[#10393b]">
+                    {activeReview.brand} {activeReview.model}
+                  </div>
+                  <div className="text-xs text-[#666666]">
+                    Vendor Contact: {activeReview.sellerPhone}
+                  </div>
+                </div>
+
+                {/* Specs List */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {activeReview.specs?.cpu && (
+                    <div className="p-2 rounded-[5px] bg-white text-[#333333]">
+                      <span className="block text-[10px] text-[#888888]">CPU</span>
+                      <span className="truncate">{activeReview.specs.cpu}</span>
+                    </div>
+                  )}
+                  {activeReview.specs?.ram && (
+                    <div className="p-2 rounded-[5px] bg-white text-[#333333]">
+                      <span className="block text-[10px] text-[#888888]">RAM</span>
+                      <span className="truncate">{activeReview.specs.ram}</span>
+                    </div>
+                  )}
+                  {activeReview.specs?.storage && (
+                    <div className="p-2 rounded-[5px] bg-white text-[#333333]">
+                      <span className="block text-[10px] text-[#888888]">Storage</span>
+                      <span className="truncate">{activeReview.specs.storage}</span>
+                    </div>
+                  )}
+                  {activeReview.specs?.batteryHealth && (
+                    <div className="p-2 rounded-[5px] bg-white text-[#10393b]">
+                      <span className="block text-[10px] text-[#888888]">Battery</span>
+                      <span>🔋 {activeReview.specs.batteryHealth}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Photo Previews */}
+                {activeReview.cloudinaryPhotos && activeReview.cloudinaryPhotos.length > 0 && (
+                  <div>
+                    <span className="block text-[10px] text-[#888888] uppercase tracking-wider mb-1">
+                      Uploaded Photos ({activeReview.cloudinaryPhotos.length})
+                    </span>
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+                      {activeReview.cloudinaryPhotos.map((img, i) => (
+                        <a key={i} href={img} target="_blank" rel="noopener noreferrer" className="shrink-0 w-16 h-16 rounded-[6px] overflow-hidden bg-white hover:opacity-90 transition-opacity">
+                          <img src={img} alt="" className="w-full h-full object-cover" />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
                 )}
-              </div>
 
-              <div className="p-4 rounded-[6px] bg-[#ffad24]/10 space-y-2">
-                <span className="block text-[11px] font-normal text-[#ffad24] uppercase tracking-wider">
-                  Notes
-                </span>
-                <p className="text-xs text-[#333333] font-normal">
-                  {activeReview.flagReason || 'Requires manual confirmation'}
-                </p>
+                {/* Raw messages or voice transcript */}
+                {(activeReview.rawMessages?.length > 0 || activeReview.audioTranscript) && (
+                  <div className="p-2.5 rounded-[5px] bg-white text-xs space-y-1">
+                    <span className="block text-[10px] text-[#888888] uppercase tracking-wider">
+                      Vendor Transcript
+                    </span>
+                    {activeReview.rawMessages?.length > 0 && (
+                      <p className="text-[#444444] text-[11px] leading-relaxed">
+                        {activeReview.rawMessages.join(' ')}
+                      </p>
+                    )}
+                    {activeReview.audioTranscript && (
+                      <p className="text-[#10393b] text-[11px] italic bg-[#30c5ce]/10 p-1.5 rounded-[4px]">
+                        🎤 &quot;{activeReview.audioTranscript}&quot;
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Editable Price & Grade with Live Delta */}
+                <div className="pt-2 border-t border-[#dcdad2] space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <span className="block text-xs text-[#555555] mb-1">Price (₦)</span>
+                      <input
+                        type="number"
+                        value={editPrice}
+                        onChange={(e) => setEditPrice(Number(e.target.value))}
+                        className="w-full h-9 px-3 rounded-[5px] bg-white text-xs font-mono font-medium text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 border-0"
+                      />
+                    </div>
+                    <div>
+                      <span className="block text-xs text-[#555555] mb-1">Condition</span>
+                      <input
+                        type="text"
+                        value={editGrade}
+                        onChange={(e) => setEditGrade(e.target.value)}
+                        className="w-full h-9 px-3 rounded-[5px] bg-white text-xs text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 border-0"
+                      />
+                    </div>
+                  </div>
+
+                  {activeReview.maxBudget && (
+                    <div className="text-[11px] flex items-center gap-1.5">
+                      {editPrice <= activeReview.maxBudget ? (
+                        <span className="text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-[3px]">
+                          ✓ Fits student budget (₦{(activeReview.maxBudget - editPrice).toLocaleString()} under max)
+                        </span>
+                      ) : (
+                        <span className="text-amber-800 bg-amber-100 px-2 py-0.5 rounded-[3px]">
+                          ⚠️ ₦{(editPrice - activeReview.maxBudget).toLocaleString()} above student max budget
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <span className="block text-xs font-normal text-[#777777] uppercase tracking-wider">
-                Price & Condition
-              </span>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <span className="block text-xs text-[#555555] mb-1.5 font-normal">Price (₦)</span>
-                  <input
-                    type="number"
-                    value={editPrice}
-                    onChange={(e) => setEditPrice(Number(e.target.value))}
-                    className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm font-mono font-normal text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 border-0"
-                  />
-                </div>
-                <div>
-                  <span className="block text-xs text-[#555555] mb-1.5 font-normal">Condition</span>
-                  <input
-                    type="text"
-                    value={editGrade}
-                    onChange={(e) => setEditGrade(e.target.value)}
-                    className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-3">
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#eceae2]">
               <Button
                 variant="ghost"
-                size="md"
+                size="sm"
                 onClick={handleRejectReview}
                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
               >
-                Decline
+                Decline Offer
               </Button>
               <Button
                 variant="primary"
-                size="md"
+                size="sm"
                 onClick={handleApproveReview}
               >
-                Approve
+                Approve & Publish to Student
               </Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ADD VENDOR MODAL - WITH CUSTOM DROPDOWN */}
+      {/* DEAL MANAGEMENT & DISPUTE RESOLUTION MODAL */}
+      {selectedDeal && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-[10px] w-full max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar p-6 sm:p-7 space-y-5 animate-chat-morph">
+            <div className="flex items-center justify-between border-b border-[#eceae2] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs font-normal px-2.5 py-1 rounded-[3px] bg-[#eceae2] text-[#10393b]">
+                  #{selectedDeal.offer?.request?.publicToken || selectedDeal.id.slice(0, 8)}
+                </span>
+                <span className={`px-2 py-0.5 rounded-[3px] text-[10px] font-normal ${
+                  selectedDeal.status === 'SUCCESSFUL' || selectedDeal.status === 'COMPLETED'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : selectedDeal.status === 'DISPUTED'
+                    ? 'bg-red-100 text-red-800'
+                    : selectedDeal.status === 'INSPECTION'
+                    ? 'bg-blue-100 text-blue-800'
+                    : 'bg-amber-100 text-amber-800'
+                }`}>
+                  {selectedDeal.status === 'SUCCESSFUL' || selectedDeal.status === 'COMPLETED'
+                    ? 'Completed & Paid'
+                    : selectedDeal.status === 'DISPUTED'
+                    ? 'Disputed'
+                    : selectedDeal.status === 'INSPECTION'
+                    ? 'Inspection in Progress'
+                    : 'Deal Sourced'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedDeal(null);
+                  setShowDisputeBox(false);
+                  setDisputeInput('');
+                }}
+                className="w-7 h-7 rounded-[4px] hover:bg-[#eceae2] flex items-center justify-center text-[#777777] hover:text-[#10393b] cursor-pointer"
+              >
+                <XMarkIcon className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Deal Overview Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div className="p-4 rounded-[6px] bg-[#eceae2] space-y-1.5">
+                <span className="block text-[10px] text-[#777777] uppercase tracking-wider font-medium">
+                  Student & Device
+                </span>
+                <div className="text-sm font-medium text-[#10393b]">
+                  {selectedDeal.offer?.brand} {selectedDeal.offer?.model}
+                </div>
+                <div className="text-[#555555]">
+                  Student: <strong>{selectedDeal.offer?.request?.buyerName}</strong> ({selectedDeal.offer?.request?.buyerPhone})
+                </div>
+                <div className="font-mono text-base font-normal text-[#10393b] pt-1">
+                  ₦{Number(selectedDeal.finalAgreedPrice).toLocaleString()}
+                </div>
+              </div>
+
+              <div className="p-4 rounded-[6px] bg-[#eceae2] space-y-1.5">
+                <span className="block text-[10px] text-[#777777] uppercase tracking-wider font-medium">
+                  Vendor & Escrow Payout
+                </span>
+                <div className="text-sm font-medium text-[#10393b]">
+                  {selectedDeal.offer?.seller?.businessName}
+                </div>
+                <div className="text-[#555555]">
+                  Stall: {selectedDeal.offer?.seller?.physicalLocation || 'Campus Market'}
+                </div>
+                <div className="font-mono text-[11px] text-[#10393b] pt-1">
+                  {selectedDeal.offer?.seller?.bankName || 'Kuda Bank'} • {selectedDeal.offer?.seller?.accountNumber || '2019481920'}
+                </div>
+                <div className="text-[10px] text-[#777777]">
+                  Account Name: {selectedDeal.offer?.seller?.accountName || selectedDeal.offer?.seller?.businessName}
+                </div>
+              </div>
+            </div>
+
+            {/* Campus Desk Physical Inspection Checklist */}
+            <div className="p-4 rounded-[6px] bg-[#f5f4ef] space-y-2.5">
+              <span className="block text-[11px] text-[#10393b] font-medium uppercase tracking-wider">
+                Campus Desk Inspection Checklist
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div className="flex items-center gap-2 p-2 rounded-[5px] bg-white text-[#333333]">
+                  <CheckCircleIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Battery Health Checked (≥ 80%)</span>
+                </div>
+                <div className="flex items-center gap-2 p-2 rounded-[5px] bg-white text-[#333333]">
+                  <CheckCircleIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Display & Keyboard Functional</span>
+                </div>
+                <div className="flex items-center gap-2 p-2 rounded-[5px] bg-white text-[#333333]">
+                  <CheckCircleIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>iCloud / Google Lock Unlinked</span>
+                </div>
+                <div className="flex items-center gap-2 p-2 rounded-[5px] bg-white text-[#333333]">
+                  <CheckCircleIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>7-Day Campus Warranty Registered</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Dispute Banner if active */}
+            {selectedDeal.status === 'DISPUTED' && selectedDeal.disputeReason && (
+              <div className="p-3.5 rounded-[6px] bg-red-100 text-red-800 text-xs space-y-1">
+                <div className="font-medium flex items-center gap-1.5">
+                  <ExclamationTriangleIcon className="w-4 h-4 text-red-600" />
+                  Active Dispute Reported:
+                </div>
+                <p className="leading-relaxed">&quot;{selectedDeal.disputeReason}&quot;</p>
+              </div>
+            )}
+
+            {/* Dispute Input Drawer */}
+            {showDisputeBox && (
+              <div className="p-3.5 rounded-[6px] bg-amber-50 space-y-2 border border-amber-200">
+                <span className="block text-xs font-medium text-amber-900">
+                  Enter Dispute Reason (e.g. Battery degraded, screen backlight flicker):
+                </span>
+                <textarea
+                  rows={2}
+                  value={disputeInput}
+                  onChange={(e) => setDisputeInput(e.target.value)}
+                  placeholder="Describe the defect or reason for hold..."
+                  className="w-full p-2 rounded-[5px] bg-white text-xs text-[#10393b] outline-none focus:ring-2 focus:ring-amber-500/30 border-0"
+                />
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowDisputeBox(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleUpdateDealStage(selectedDeal.id, 'DISPUTED', disputeInput)}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    Confirm Dispute Hold
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Stage Action Buttons */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#eceae2]">
+              <div className="flex items-center gap-2">
+                {selectedDeal.status === 'IN_PROGRESS' && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleUpdateDealStage(selectedDeal.id, 'INSPECTION')}
+                  >
+                    Move to Desk Inspection
+                  </Button>
+                )}
+
+                {selectedDeal.status === 'INSPECTION' && (
+                  <>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => handleUpdateDealStage(selectedDeal.id, 'SUCCESSFUL')}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                    >
+                      <CheckCircleIcon className="w-4 h-4 mr-1.5" />
+                      Passed: Release Escrow Payout
+                    </Button>
+                    {!showDisputeBox && (
+                      <button
+                        type="button"
+                        onClick={() => setShowDisputeBox(true)}
+                        className="h-8 px-3 rounded-[5px] bg-red-100 hover:bg-red-200 text-xs text-red-700 font-medium cursor-pointer transition-colors"
+                      >
+                        Flag Defect / Dispute
+                      </button>
+                    )}
+                  </>
+                )}
+
+                {selectedDeal.status === 'DISPUTED' && (
+                  <>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => handleUpdateDealStage(selectedDeal.id, 'INSPECTION')}
+                    >
+                      Vendor Replaced Unit (Re-inspect)
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateDealStage(selectedDeal.id, 'CANCELLED', 'Refund issued to student')}
+                      className="h-8 px-3 rounded-[5px] bg-red-100 hover:bg-red-200 text-xs text-red-700 font-medium cursor-pointer transition-colors"
+                    >
+                      Refund Student & Cancel Deal
+                    </button>
+                  </>
+                )}
+              </div>
+
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setSelectedDeal(null);
+                  setShowDisputeBox(false);
+                  setDisputeInput('');
+                }}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADD VENDOR MODAL - WITH CUSTOM DROPDOWN, LOCATION & ESCROW BANK */}
       {showAddSellerModal && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <form
             onSubmit={handleCreateSeller}
-            className="bg-white rounded-[10px] w-full max-w-md p-6 sm:p-7 space-y-4 animate-chat-morph"
+            className="bg-white rounded-[10px] w-full max-w-lg max-h-[90vh] overflow-y-auto no-scrollbar p-6 sm:p-7 space-y-4 animate-chat-morph"
           >
-            <h3 className="text-base font-normal text-[#10393b]">
-              Add Vendor
-            </h3>
+            <div className="flex items-center justify-between border-b border-[#eceae2] pb-2">
+              <h3 className="text-base font-normal text-[#10393b]">
+                Add Verified Campus Vendor
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowAddSellerModal(false)}
+                className="w-7 h-7 rounded-[4px] hover:bg-[#eceae2] flex items-center justify-center text-[#777777] hover:text-[#10393b] cursor-pointer"
+              >
+                <XMarkIcon className="w-4 h-4" />
+              </button>
+            </div>
+
             <div>
-              <span className="block text-xs font-normal text-[#555555] mb-1.5">Business Name</span>
+              <span className="block text-xs font-normal text-[#555555] mb-1.5">Business / Store Name</span>
               <input
                 required
                 type="text"
@@ -1362,47 +2057,101 @@ export function App() {
                 className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
               />
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <span className="block text-xs font-normal text-[#555555] mb-1.5">Contact Person</span>
+                <input
+                  required
+                  type="text"
+                  placeholder="e.g. Samuel"
+                  value={newSellerContact}
+                  onChange={(e) => setNewSellerContact(e.target.value)}
+                  className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
+                />
+              </div>
+              <div>
+                <span className="block text-xs font-normal text-[#555555] mb-1.5">WhatsApp Phone</span>
+                <input
+                  required
+                  type="text"
+                  placeholder="e.g. 2348012345678"
+                  value={newSellerPhone}
+                  onChange={(e) => setNewSellerPhone(e.target.value)}
+                  className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <span className="block text-xs font-normal text-[#555555] mb-1.5">Category</span>
+                <CustomDropdown
+                  options={MODAL_CATEGORY_OPTIONS}
+                  value={newSellerCategory}
+                  onChange={(val) => setNewSellerCategory(val as any)}
+                />
+              </div>
+              <div>
+                <span className="block text-xs font-normal text-[#555555] mb-1.5">Verification Tier</span>
+                <CustomDropdown
+                  options={TIER_OPTIONS}
+                  value={newSellerTier}
+                  onChange={(val) => setNewSellerTier(val as any)}
+                />
+              </div>
+            </div>
+
             <div>
-              <span className="block text-xs font-normal text-[#555555] mb-1.5">Contact Person</span>
+              <span className="block text-xs font-normal text-[#555555] mb-1.5">Physical Stall Location</span>
               <input
-                required
                 type="text"
-                placeholder="e.g. Samuel"
-                value={newSellerContact}
-                onChange={(e) => setNewSellerContact(e.target.value)}
+                placeholder="e.g. Shop 14, Main Campus Market Complex"
+                value={newSellerLocation}
+                onChange={(e) => setNewSellerLocation(e.target.value)}
                 className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
               />
             </div>
-            <div>
-              <span className="block text-xs font-normal text-[#555555] mb-1.5">WhatsApp Phone</span>
-              <input
-                required
-                type="text"
-                placeholder="e.g. 2348012345678"
-                value={newSellerPhone}
-                onChange={(e) => setNewSellerPhone(e.target.value)}
-                className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
-              />
+
+            <div className="p-3.5 rounded-[8px] bg-[#eceae2] space-y-3">
+              <span className="block text-[11px] font-medium text-[#777777] uppercase tracking-wider">
+                Escrow Payout Bank Details
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <span className="block text-[11px] text-[#555555] mb-1">Bank Name</span>
+                  <input
+                    type="text"
+                    placeholder="e.g. Kuda Bank / OPay"
+                    value={newSellerBankName}
+                    onChange={(e) => setNewSellerBankName(e.target.value)}
+                    className="w-full h-9 px-3 rounded-[5px] bg-white text-xs text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 border-0"
+                  />
+                </div>
+                <div>
+                  <span className="block text-[11px] text-[#555555] mb-1">Account Number</span>
+                  <input
+                    type="text"
+                    placeholder="e.g. 2019481920"
+                    value={newSellerAccountNumber}
+                    onChange={(e) => setNewSellerAccountNumber(e.target.value)}
+                    className="w-full h-9 px-3 rounded-[5px] bg-white text-xs font-mono text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 border-0"
+                  />
+                </div>
+              </div>
+              <div>
+                <span className="block text-[11px] text-[#555555] mb-1">Account Name</span>
+                <input
+                  type="text"
+                  placeholder="e.g. Samuel Apex Enterprise"
+                  value={newSellerAccountName}
+                  onChange={(e) => setNewSellerAccountName(e.target.value)}
+                  className="w-full h-9 px-3 rounded-[5px] bg-white text-xs text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 border-0"
+                />
+              </div>
             </div>
-            <div>
-              <span className="block text-xs font-normal text-[#555555] mb-1.5">Telegram (Optional)</span>
-              <input
-                type="text"
-                placeholder="e.g. @jerus_tech"
-                value={newSellerTelegram}
-                onChange={(e) => setNewSellerTelegram(e.target.value)}
-                className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
-              />
-            </div>
-            <div>
-              <span className="block text-xs font-normal text-[#555555] mb-1.5">Category</span>
-              <CustomDropdown
-                options={MODAL_CATEGORY_OPTIONS}
-                value={newSellerCategory}
-                onChange={(val) => setNewSellerCategory(val as any)}
-              />
-            </div>
-            <div className="flex items-center justify-end gap-2 pt-3">
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#eceae2]">
               <Button
                 type="button"
                 variant="ghost"
@@ -1416,7 +2165,7 @@ export function App() {
                 variant="primary"
                 size="sm"
               >
-                Save Vendor
+                Register Verified Vendor
               </Button>
             </div>
           </form>
@@ -1428,11 +2177,21 @@ export function App() {
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <form
             onSubmit={handleUpdateSeller}
-            className="bg-white rounded-[10px] w-full max-w-md p-6 sm:p-7 space-y-4 animate-chat-morph"
+            className="bg-white rounded-[10px] w-full max-w-lg max-h-[90vh] overflow-y-auto no-scrollbar p-6 sm:p-7 space-y-4 animate-chat-morph"
           >
-            <h3 className="text-base font-normal text-[#10393b]">
-              Edit Vendor: {editingSeller.businessName}
-            </h3>
+            <div className="flex items-center justify-between border-b border-[#eceae2] pb-2">
+              <h3 className="text-base font-normal text-[#10393b]">
+                Edit Vendor: {editingSeller.businessName}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingSeller(null)}
+                className="w-7 h-7 rounded-[4px] hover:bg-[#eceae2] flex items-center justify-center text-[#777777] hover:text-[#10393b] cursor-pointer"
+              >
+                <XMarkIcon className="w-4 h-4" />
+              </button>
+            </div>
+
             <div>
               <span className="block text-xs font-normal text-[#555555] mb-1.5">Business Name</span>
               <input
@@ -1443,44 +2202,95 @@ export function App() {
                 className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
               />
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <span className="block text-xs font-normal text-[#555555] mb-1.5">Contact Person</span>
+                <input
+                  required
+                  type="text"
+                  value={editSellerContact}
+                  onChange={(e) => setEditSellerContact(e.target.value)}
+                  className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
+                />
+              </div>
+              <div>
+                <span className="block text-xs font-normal text-[#555555] mb-1.5">WhatsApp Phone</span>
+                <input
+                  required
+                  type="text"
+                  value={editSellerPhone}
+                  onChange={(e) => setEditSellerPhone(e.target.value)}
+                  className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <span className="block text-xs font-normal text-[#555555] mb-1.5">Category</span>
+                <CustomDropdown
+                  options={MODAL_CATEGORY_OPTIONS}
+                  value={editSellerCategory}
+                  onChange={(val) => setEditSellerCategory(val as any)}
+                />
+              </div>
+              <div>
+                <span className="block text-xs font-normal text-[#555555] mb-1.5">Verification Tier</span>
+                <CustomDropdown
+                  options={TIER_OPTIONS}
+                  value={editSellerTier}
+                  onChange={(val) => setEditSellerTier(val as any)}
+                />
+              </div>
+            </div>
+
             <div>
-              <span className="block text-xs font-normal text-[#555555] mb-1.5">Contact Person</span>
+              <span className="block text-xs font-normal text-[#555555] mb-1.5">Physical Stall Location</span>
               <input
-                required
                 type="text"
-                value={editSellerContact}
-                onChange={(e) => setEditSellerContact(e.target.value)}
+                value={editSellerLocation}
+                onChange={(e) => setEditSellerLocation(e.target.value)}
                 className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
               />
             </div>
-            <div>
-              <span className="block text-xs font-normal text-[#555555] mb-1.5">WhatsApp Phone</span>
-              <input
-                required
-                type="text"
-                value={editSellerPhone}
-                onChange={(e) => setEditSellerPhone(e.target.value)}
-                className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
-              />
+
+            <div className="p-3.5 rounded-[8px] bg-[#eceae2] space-y-3">
+              <span className="block text-[11px] font-medium text-[#777777] uppercase tracking-wider">
+                Escrow Payout Bank Details
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <span className="block text-[11px] text-[#555555] mb-1">Bank Name</span>
+                  <input
+                    type="text"
+                    value={editSellerBankName}
+                    onChange={(e) => setEditSellerBankName(e.target.value)}
+                    className="w-full h-9 px-3 rounded-[5px] bg-white text-xs text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 border-0"
+                  />
+                </div>
+                <div>
+                  <span className="block text-[11px] text-[#555555] mb-1">Account Number</span>
+                  <input
+                    type="text"
+                    value={editSellerAccountNumber}
+                    onChange={(e) => setEditSellerAccountNumber(e.target.value)}
+                    className="w-full h-9 px-3 rounded-[5px] bg-white text-xs font-mono text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 border-0"
+                  />
+                </div>
+              </div>
+              <div>
+                <span className="block text-[11px] text-[#555555] mb-1">Account Name</span>
+                <input
+                  type="text"
+                  value={editSellerAccountName}
+                  onChange={(e) => setEditSellerAccountName(e.target.value)}
+                  className="w-full h-9 px-3 rounded-[5px] bg-white text-xs text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 border-0"
+                />
+              </div>
             </div>
-            <div>
-              <span className="block text-xs font-normal text-[#555555] mb-1.5">Telegram (Optional)</span>
-              <input
-                type="text"
-                value={editSellerTelegram}
-                onChange={(e) => setEditSellerTelegram(e.target.value)}
-                className="w-full h-10 px-3 rounded-[6px] bg-[#eceae2] focus:bg-white text-sm text-[#10393b] outline-none focus:ring-2 focus:ring-[#30c5ce]/30 font-normal border-0"
-              />
-            </div>
-            <div>
-              <span className="block text-xs font-normal text-[#555555] mb-1.5">Category</span>
-              <CustomDropdown
-                options={MODAL_CATEGORY_OPTIONS}
-                value={editSellerCategory}
-                onChange={(val) => setEditSellerCategory(val as any)}
-              />
-            </div>
-            <div className="flex items-center justify-end gap-2 pt-3">
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#eceae2]">
               <Button
                 type="button"
                 variant="ghost"
@@ -1494,7 +2304,7 @@ export function App() {
                 variant="primary"
                 size="sm"
               >
-                Update Vendor
+                Update Vendor Profile
               </Button>
             </div>
           </form>

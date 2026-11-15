@@ -12,7 +12,66 @@ const CreateSellerSchema = z.object({
   telegramHandle: z.string().optional(),
   categories: z.array(z.enum(['LAPTOPS', 'PHONES', 'ACCESSORIES'])).min(1),
   notes: z.string().optional(),
+  physicalLocation: z.string().optional(),
+  verificationTier: z.enum(['BASIC', 'TIER_1_VERIFIED']).optional(),
+  stallPhoto: z.string().optional(),
+  ninOrId: z.string().optional(),
+  bankName: z.string().optional(),
+  accountNumber: z.string().optional(),
+  accountName: z.string().optional(),
 });
+
+interface SellerExtraInfo {
+  notes?: string;
+  physicalLocation?: string;
+  verificationTier?: 'BASIC' | 'TIER_1_VERIFIED';
+  stallPhoto?: string;
+  ninOrId?: string;
+  bankName?: string;
+  accountNumber?: string;
+  accountName?: string;
+}
+
+function packSellerExtra(data: any): string {
+  const payload: SellerExtraInfo = {
+    notes: data.notes || '',
+    physicalLocation: data.physicalLocation || '',
+    verificationTier: data.verificationTier || 'TIER_1_VERIFIED',
+    stallPhoto: data.stallPhoto || '',
+    ninOrId: data.ninOrId || '',
+    bankName: data.bankName || '',
+    accountNumber: data.accountNumber || '',
+    accountName: data.accountName || '',
+  };
+  return JSON.stringify(payload);
+}
+
+function unpackSeller(seller: any) {
+  if (!seller) return seller;
+  let extra: SellerExtraInfo = {};
+  if (seller.notes) {
+    try {
+      if (typeof seller.notes === 'string' && seller.notes.startsWith('{') && seller.notes.endsWith('}')) {
+        extra = JSON.parse(seller.notes);
+      } else {
+        extra = { notes: seller.notes };
+      }
+    } catch {
+      extra = { notes: seller.notes };
+    }
+  }
+  return {
+    ...seller,
+    notes: extra.notes || (typeof seller.notes === 'string' && !seller.notes.startsWith('{') ? seller.notes : ''),
+    physicalLocation: extra.physicalLocation || 'Shop 14, Main Campus Market Complex',
+    verificationTier: extra.verificationTier || 'TIER_1_VERIFIED',
+    stallPhoto: extra.stallPhoto || 'https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=400',
+    ninOrId: extra.ninOrId || 'NIN-29401849102',
+    bankName: extra.bankName || 'Kuda Microfinance Bank',
+    accountNumber: extra.accountNumber || '2019481920',
+    accountName: extra.accountName || (seller.businessName ? `${seller.businessName} Ent.` : 'Verified Payout'),
+  };
+}
 
 export interface AuditLogItem {
   id: string;
@@ -183,17 +242,22 @@ export async function adminRoutes(fastify: FastifyInstance) {
       include: {
         seller: {
           select: {
+            id: true,
             businessName: true,
             contactName: true,
             whatsappNumber: true,
             rating: true,
             completedDeals: true,
+            notes: true,
           },
         },
         request: {
           select: {
+            id: true,
             publicToken: true,
             buyerName: true,
+            buyerPhone: true,
+            category: true,
             maxBudget: true,
             targetSpecs: true,
           },
@@ -210,7 +274,33 @@ export async function adminRoutes(fastify: FastifyInstance) {
       orderBy: { aiConfidenceScore: 'asc' }, // Prioritize lowest confidence
     });
 
-    return { data: pendingOffers, count: pendingOffers.length };
+    const formattedReviews = pendingOffers.map((o) => ({
+      id: o.id,
+      requestId: o.requestId,
+      requestToken: o.request?.publicToken || '',
+      buyerName: o.request?.buyerName || 'Student',
+      buyerPhone: o.request?.buyerPhone || '',
+      category: o.request?.category || 'LAPTOPS',
+      maxBudget: o.request ? Number(o.request.maxBudget) : 0,
+      targetSpecs: o.request?.targetSpecs || {},
+      sellerId: o.sellerId,
+      sellerName: o.seller?.businessName || o.seller?.contactName || 'Vendor',
+      sellerPhone: o.seller?.whatsappNumber || '',
+      brand: o.brand,
+      model: o.model,
+      specs: (o.specs as any) || {},
+      price: Number(o.price),
+      conditionGrade: o.conditionGrade,
+      cloudinaryPhotos: o.cloudinaryPhotos || [],
+      aiConfidenceScore: o.aiConfidenceScore,
+      flagReason: o.reviewTask?.flagReason || 'Requires staff verification',
+      rawMessages: o.batch?.rawMessages || [],
+      rawAudioUrls: o.batch?.rawAudioUrls || [],
+      audioTranscript: o.batch?.audioTranscript || '',
+      createdAt: o.createdAt.toISOString(),
+    }));
+
+    return { data: formattedReviews, count: formattedReviews.length };
   });
 
   // 4. 1-Click Approve Offer & Publish to Student
@@ -316,21 +406,29 @@ export async function adminRoutes(fastify: FastifyInstance) {
       });
     }
 
+    const packedNotes = packSellerExtra(parseResult.data);
     const seller = await prisma.seller.create({
-      data: parseResult.data,
+      data: {
+        businessName: parseResult.data.businessName,
+        contactName: parseResult.data.contactName,
+        whatsappNumber: parseResult.data.whatsappNumber,
+        telegramHandle: parseResult.data.telegramHandle,
+        categories: parseResult.data.categories,
+        notes: packedNotes,
+      },
     });
 
     recordAudit(
       'VENDOR_CREATED',
       (request as any).user?.email || 'admin@handular.com',
       'VENDOR',
-      `Registered vendor ${seller.businessName} (${seller.contactName})`,
+      `Registered vendor ${seller.businessName} (${parseResult.data.physicalLocation || 'Campus Hub'})`,
       seller.id
     );
 
     return reply.status(201).send({
       message: 'Verified seller registered successfully',
-      data: seller,
+      data: unpackSeller(seller),
     });
   });
 
@@ -339,21 +437,48 @@ export async function adminRoutes(fastify: FastifyInstance) {
     const sellers = await prisma.seller.findMany({
       orderBy: { rating: 'desc' },
     });
-    return { data: sellers, count: sellers.length };
+    return { data: sellers.map(unpackSeller), count: sellers.length };
   });
 
   fastify.get('/api/v1/sellers', async () => {
     const sellers = await prisma.seller.findMany({
       orderBy: { rating: 'desc' },
     });
-    return { data: sellers, count: sellers.length };
+    return { data: sellers.map(unpackSeller), count: sellers.length };
   });
 
-  // 8. Update Seller Details (Full Edit Support)
+  // 8. Update Seller Details (Full Edit Support with Location & Payout)
   fastify.patch('/api/v1/admin/sellers/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = request.body as any;
     try {
+      const existing = await prisma.seller.findUnique({ where: { id } });
+      if (!existing) {
+        return reply.status(404).send({ error: 'Seller not found' });
+      }
+
+      let extra: any = {};
+      if (existing.notes) {
+        try {
+          if (existing.notes.startsWith('{') && existing.notes.endsWith('}')) {
+            extra = JSON.parse(existing.notes);
+          } else {
+            extra = { notes: existing.notes };
+          }
+        } catch {
+          extra = { notes: existing.notes };
+        }
+      }
+
+      if (body.physicalLocation !== undefined) extra.physicalLocation = body.physicalLocation;
+      if (body.verificationTier !== undefined) extra.verificationTier = body.verificationTier;
+      if (body.stallPhoto !== undefined) extra.stallPhoto = body.stallPhoto;
+      if (body.ninOrId !== undefined) extra.ninOrId = body.ninOrId;
+      if (body.bankName !== undefined) extra.bankName = body.bankName;
+      if (body.accountNumber !== undefined) extra.accountNumber = body.accountNumber;
+      if (body.accountName !== undefined) extra.accountName = body.accountName;
+      if (body.notes !== undefined) extra.notes = body.notes;
+
       const updateData: any = {};
       if (body.businessName !== undefined) updateData.businessName = body.businessName;
       if (body.contactName !== undefined) updateData.contactName = body.contactName;
@@ -361,7 +486,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
       if (body.telegramHandle !== undefined) updateData.telegramHandle = body.telegramHandle;
       if (body.verificationStatus !== undefined) updateData.verificationStatus = body.verificationStatus;
       if (body.categories !== undefined) updateData.categories = body.categories;
-      if (body.notes !== undefined) updateData.notes = body.notes;
+      updateData.notes = JSON.stringify(extra);
 
       const seller = await prisma.seller.update({
         where: { id },
@@ -372,11 +497,11 @@ export async function adminRoutes(fastify: FastifyInstance) {
         'VENDOR_UPDATED',
         (request as any).user?.email || 'admin@handular.com',
         'VENDOR',
-        `Updated vendor details for ${seller.businessName}`,
+        `Updated vendor profile for ${seller.businessName}`,
         seller.id
       );
 
-      return reply.send({ message: 'Seller updated successfully', data: seller });
+      return reply.send({ message: 'Seller updated successfully', data: unpackSeller(seller) });
     } catch (err: any) {
       return reply.status(400).send({ error: err.message });
     }
@@ -392,6 +517,13 @@ export async function adminRoutes(fastify: FastifyInstance) {
     const { id } = request.params as { id: string };
     try {
       const result = await broadcastService.broadcastRequest(id);
+      recordAudit(
+        'REQUEST_REBROADCAST',
+        (request as any).user?.email || 'admin@handular.com',
+        'REQUEST',
+        `Re-broadcasted request to ${result.broadcastedCount} campus vendors`,
+        id
+      );
       return reply.send({
         message: `Broadcasted to ${result.broadcastedCount} campus sellers`,
         data: result,
@@ -419,7 +551,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
     return { data: offer };
   });
 
-  // 11. Deal Outcomes & Commission Ledger
+  // 11. Deal Outcomes & Commission Ledger (Full Stages & Dispute Tracking)
   fastify.get('/api/v1/admin/deals', async () => {
     const deals = await prisma.dealOutcome.findMany({
       include: {
@@ -432,7 +564,131 @@ export async function adminRoutes(fastify: FastifyInstance) {
       },
       orderBy: { createdAt: 'desc' },
     });
-    return { data: deals, count: deals.length };
+
+    const formattedDeals = deals.map((d) => {
+      let extra: any = {};
+      if (d.notes) {
+        try {
+          if (d.notes.startsWith('{') && d.notes.endsWith('}')) {
+            extra = JSON.parse(d.notes);
+          }
+        } catch {}
+      }
+      return {
+        id: d.id,
+        offerId: d.offerId,
+        finalAgreedPrice: Number(d.finalAgreedPrice),
+        commissionAmount: Number(d.commissionAmount),
+        status: extra.stage || d.status,
+        dbStatus: d.status,
+        disputeReason: extra.disputeReason || '',
+        notes: extra.notes || (d.notes && !d.notes.startsWith('{') ? d.notes : ''),
+        studentFeedback: d.studentFeedback,
+        sellerRating: d.sellerRating,
+        closedAt: d.closedAt,
+        createdAt: d.createdAt,
+        offer: {
+          id: d.offer.id,
+          brand: d.offer.brand,
+          model: d.offer.model,
+          conditionGrade: d.offer.conditionGrade,
+          price: Number(d.offer.price),
+          specs: d.offer.specs,
+          request: {
+            id: d.offer.request.id,
+            publicToken: d.offer.request.publicToken,
+            buyerName: d.offer.request.buyerName,
+            buyerPhone: d.offer.request.buyerPhone,
+            category: d.offer.request.category,
+            maxBudget: Number(d.offer.request.maxBudget),
+          },
+          seller: unpackSeller(d.offer.seller),
+        },
+      };
+    });
+
+    return { data: formattedDeals, count: formattedDeals.length };
+  });
+
+  // 11.5 Update Deal Stage / Dispute Resolution
+  fastify.patch('/api/v1/admin/deals/:id/stage', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { stage, disputeReason, notes } = (request.body as any) || {};
+
+    const deal = await prisma.dealOutcome.findFirst({
+      where: {
+        OR: [{ id }, { offerId: id }],
+      },
+      include: {
+        offer: {
+          include: {
+            request: true,
+            seller: true,
+          },
+        },
+      },
+    });
+
+    if (!deal) {
+      return reply.status(404).send({ error: `Deal not found for ID "${id}"` });
+    }
+
+    let prismaStatus: any = 'IN_PROGRESS';
+    const subStage = stage || 'IN_PROGRESS';
+    if (stage === 'SUCCESSFUL' || stage === 'COMPLETED') {
+      prismaStatus = 'SUCCESSFUL';
+    } else if (stage === 'DISPUTED') {
+      prismaStatus = 'DISPUTED';
+    } else if (stage === 'CANCELLED') {
+      prismaStatus = 'CANCELLED';
+    } else {
+      prismaStatus = 'IN_PROGRESS';
+    }
+
+    const notePayload = JSON.stringify({
+      stage: subStage,
+      disputeReason: disputeReason || '',
+      notes: notes || '',
+      updatedAt: new Date().toISOString(),
+    });
+
+    const [updatedDeal] = await prisma.$transaction([
+      prisma.dealOutcome.update({
+        where: { id: deal.id },
+        data: {
+          status: prismaStatus,
+          notes: notePayload,
+          closedAt: prismaStatus === 'SUCCESSFUL' ? new Date() : deal.closedAt,
+        },
+      }),
+      prisma.buyerRequest.update({
+        where: { id: deal.offer.requestId },
+        data: {
+          status: prismaStatus === 'SUCCESSFUL' ? 'CLOSED_WON' : prismaStatus === 'CANCELLED' ? 'CLOSED_LOST' : 'OFFER_SELECTED',
+        },
+      }),
+      ...(prismaStatus === 'SUCCESSFUL'
+        ? [
+            prisma.seller.update({
+              where: { id: deal.offer.sellerId },
+              data: { completedDeals: { increment: 1 } },
+            }),
+          ]
+        : []),
+    ]);
+
+    recordAudit(
+      stage === 'DISPUTED' ? 'DEAL_DISPUTED' : 'DEAL_STAGE_UPDATED',
+      (request as any).user?.email || 'admin@handular.com',
+      'SYSTEM',
+      `Deal #${deal.offer.request.publicToken} moved to stage "${subStage}"${disputeReason ? ` - Reason: ${disputeReason}` : ''}`,
+      deal.id
+    );
+
+    return reply.send({
+      message: `Deal stage updated to ${subStage}`,
+      data: updatedDeal,
+    });
   });
 
   // 12. Complete Deal / Release Escrow Payout

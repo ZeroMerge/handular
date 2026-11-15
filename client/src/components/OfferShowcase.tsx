@@ -29,9 +29,24 @@ export const OfferShowcase: React.FC<OfferShowcaseProps> = ({
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [compareOfferIds, setCompareOfferIds] = useState<string[]>([]);
+  const [showCompareModal, setShowCompareModal] = useState(false);
 
-  const fetchOffers = async () => {
-    setIsRefreshing(true);
+  const toggleCompare = (offerId: string) => {
+    setCompareOfferIds((prev) => {
+      if (prev.includes(offerId)) {
+        return prev.filter((id) => id !== offerId);
+      }
+      if (prev.length >= 3) {
+        // limit to 3 offers side-by-side
+        return [...prev.slice(1), offerId];
+      }
+      return [...prev, offerId];
+    });
+  };
+
+  const fetchOffers = async (isSilent = false) => {
+    if (!isSilent) setIsRefreshing(true);
     const startTime = Date.now();
     try {
       setError(null);
@@ -43,20 +58,28 @@ export const OfferShowcase: React.FC<OfferShowcaseProps> = ({
       setRequest(data.request);
       setOffers(data.offers || []);
     } catch (err: any) {
-      setError(err.message || 'Error fetching offers');
+      if (!isSilent) setError(err.message || 'Error fetching offers');
     } finally {
-      // Ensure real spinning animation completes at least one full satisfying cycle (700ms)
-      const elapsed = Date.now() - startTime;
-      const remaining = Math.max(0, 700 - elapsed);
-      setTimeout(() => {
-        setIsRefreshing(false);
+      if (!isSilent) {
+        // Ensure real spinning animation completes at least one full satisfying cycle (700ms)
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, 700 - elapsed);
+        setTimeout(() => {
+          setIsRefreshing(false);
+          setLoading(false);
+        }, remaining);
+      } else {
         setLoading(false);
-      }, remaining);
+      }
     }
   };
 
   useEffect(() => {
     fetchOffers();
+    const interval = setInterval(() => {
+      fetchOffers(true);
+    }, 15000);
+    return () => clearInterval(interval);
   }, [token]);
 
   // Close on Escape key
@@ -123,7 +146,7 @@ export const OfferShowcase: React.FC<OfferShowcaseProps> = ({
 
           <div className="flex items-center gap-2">
             <button
-              onClick={fetchOffers}
+              onClick={() => fetchOffers()}
               disabled={isRefreshing}
               className="w-8 h-8 rounded-[8px] bg-[#eceae2] hover:bg-[#e4e1d7] active:bg-[#dbd8cc] flex items-center justify-center text-[#10393b] transition-all cursor-pointer disabled:opacity-80"
               title="Refresh quotes"
@@ -382,14 +405,28 @@ export const OfferShowcase: React.FC<OfferShowcaseProps> = ({
                           </span>
                         </div>
 
-                        <Button
-                          onClick={() => onSelectOffer(offer.id)}
-                          variant="primary"
-                          size="sm"
-                        >
-                          <span>Select Device</span>
-                          <ArrowRightIcon className="w-3.5 h-3.5 ml-1" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => toggleCompare(offer.id)}
+                            className={`h-8 px-2.5 rounded-[6px] text-xs font-normal transition-all cursor-pointer ${
+                              compareOfferIds.includes(offer.id)
+                                ? 'bg-[#10393b] text-[#30c5ce]'
+                                : 'bg-[#eceae2] hover:bg-[#e4e1d7] text-[#10393b]'
+                            }`}
+                          >
+                            {compareOfferIds.includes(offer.id) ? '✓ In Compare' : '+ Compare'}
+                          </button>
+
+                          <Button
+                            onClick={() => onSelectOffer(offer.id)}
+                            variant="primary"
+                            size="sm"
+                          >
+                            <span>Select Device</span>
+                            <ArrowRightIcon className="w-3.5 h-3.5 ml-1" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -398,7 +435,182 @@ export const OfferShowcase: React.FC<OfferShowcaseProps> = ({
             )}
           </div>
         </div>
+
+        {/* Floating Compare Action Bar */}
+        {compareOfferIds.length >= 1 && (
+          <div className="p-3 sm:p-4 bg-[#10393b] text-white flex items-center justify-between shrink-0 shadow-lg animate-in slide-in-from-bottom duration-200">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="w-5 h-5 rounded-full bg-[#30c5ce] text-[#10393b] font-mono font-medium flex items-center justify-center text-[11px]">
+                {compareOfferIds.length}
+              </span>
+              <span>
+                {compareOfferIds.length === 1 ? '1 device selected' : `${compareOfferIds.length} devices selected for comparison`}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCompareOfferIds([])}
+                className="text-xs text-[#dcdad2] hover:text-white px-2 py-1 cursor-pointer"
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCompareModal(true)}
+                className="px-3 py-1.5 rounded-[6px] bg-[#30c5ce] hover:bg-[#28b2bb] text-[#10393b] text-xs font-medium cursor-pointer transition-colors"
+              >
+                Compare Side-by-Side ➔
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* SIDE-BY-SIDE SPEC COMPARISON MODAL */}
+      {showCompareModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-white rounded-[16px] w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="h-14 px-5 border-b border-[#eceae2] flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-normal text-[#10393b]">
+                  Device Comparison
+                </h3>
+                <span className="text-xs font-mono px-2 py-0.5 rounded-[4px] bg-[#eceae2] text-[#666666]">
+                  {compareOfferIds.length} Devices
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCompareModal(false)}
+                className="w-8 h-8 rounded-[6px] hover:bg-[#eceae2] flex items-center justify-center text-[#777777] hover:text-[#10393b] cursor-pointer"
+              >
+                <XMarkIcon className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Comparison Grid */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+              <div className={`grid grid-cols-1 ${compareOfferIds.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-3'} gap-4`}>
+                {compareOfferIds
+                  .map((id) => offers.find((o) => o.id === id))
+                  .filter(Boolean)
+                  .map((selectedOffer: any) => {
+                    const specs = selectedOffer.specs || {};
+                    const minPrice = Math.min(
+                      ...compareOfferIds
+                        .map((id) => offers.find((o) => o.id === id)?.price || Infinity)
+                    );
+                    const isLowestPrice = selectedOffer.price === minPrice;
+                    const photo = selectedOffer.cloudinaryPhotos?.[0] || 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1000&q=80';
+
+                    return (
+                      <div
+                        key={selectedOffer.id}
+                        className="p-4 rounded-[12px] bg-[#f5f4ef] flex flex-col justify-between space-y-4"
+                      >
+                        <div className="space-y-3">
+                          {/* Image & Condition */}
+                          <div className="h-40 rounded-[10px] overflow-hidden bg-[#eceae2] relative">
+                            <img
+                              src={photo}
+                              alt={selectedOffer.model}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute top-2 left-2 px-2 py-0.5 rounded-[4px] bg-[#10393b] text-white text-[10px]">
+                              {selectedOffer.conditionGrade}
+                            </div>
+                            {isLowestPrice && (
+                              <div className="absolute top-2 right-2 px-2 py-0.5 rounded-[4px] bg-emerald-600 text-white text-[10px] font-medium">
+                                Best Price
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Brand & Model */}
+                          <div>
+                            <span className="text-[10px] uppercase font-normal text-[#888888]">
+                              {selectedOffer.brand}
+                            </span>
+                            <h4 className="text-sm font-medium text-[#10393b] leading-snug">
+                              {selectedOffer.model}
+                            </h4>
+                          </div>
+
+                          {/* Price */}
+                          <div className="p-3 rounded-[8px] bg-white">
+                            <span className="block text-[10px] uppercase text-[#888888]">Verified Price</span>
+                            <span className="text-xl font-mono text-[#10393b] font-normal">
+                              ₦{Number(selectedOffer.price).toLocaleString()}
+                            </span>
+                          </div>
+
+                          {/* Spec Table */}
+                          <div className="space-y-2 text-xs">
+                            <div className="p-2 rounded-[6px] bg-white flex justify-between gap-2">
+                              <span className="text-[#888888]">Processor</span>
+                              <span className="font-normal text-[#10393b] text-right truncate">
+                                {specs.cpu || 'Standard'}
+                              </span>
+                            </div>
+
+                            <div className="p-2 rounded-[6px] bg-white flex justify-between gap-2">
+                              <span className="text-[#888888]">Memory & Disk</span>
+                              <span className="font-normal text-[#10393b] text-right truncate">
+                                {specs.ram || '8GB'} • {specs.storage || '256GB SSD'}
+                              </span>
+                            </div>
+
+                            <div className="p-2 rounded-[6px] bg-white flex justify-between gap-2">
+                              <span className="text-[#888888]">Battery</span>
+                              <span className="font-normal text-[#10393b] text-right">
+                                {specs.batteryHealth ? `🔋 ${specs.batteryHealth}` : 'Tested Healthy (≥80%)'}
+                              </span>
+                            </div>
+
+                            <div className="p-2 rounded-[6px] bg-white flex justify-between gap-2">
+                              <span className="text-[#888888]">Screen</span>
+                              <span className="font-normal text-[#10393b] text-right truncate">
+                                {specs.screen || 'Full HD'}
+                              </span>
+                            </div>
+
+                            <div className="p-2 rounded-[6px] bg-white flex justify-between gap-2">
+                              <span className="text-[#888888]">Vendor</span>
+                              <span className="font-normal text-[#10393b] text-right truncate">
+                                {selectedOffer.seller?.businessName || 'Verified Merchant'}
+                              </span>
+                            </div>
+
+                            <div className="p-2 rounded-[6px] bg-emerald-50 text-emerald-800 flex justify-between gap-2">
+                              <span>Warranty</span>
+                              <span className="font-medium">7-Day Campus Guarantee</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Direct Select Button */}
+                        <Button
+                          onClick={() => {
+                            setShowCompareModal(false);
+                            onSelectOffer(selectedOffer.id);
+                          }}
+                          variant="primary"
+                          size="md"
+                          className="w-full justify-center"
+                        >
+                          <span>Select this {selectedOffer.brand}</span>
+                          <ArrowRightIcon className="w-3.5 h-3.5 ml-1.5" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

@@ -8,8 +8,6 @@ import {
   ArrowPathIcon,
   PlusIcon,
   CheckCircleIcon,
-  ArrowRightIcon,
-  ShieldCheckIcon,
   DevicePhoneMobileIcon,
   ArrowRightOnRectangleIcon,
   XMarkIcon,
@@ -47,7 +45,6 @@ export function App() {
   const [sellers, setSellers] = useState<SellerRecord[]>([]);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isSweeping, setIsSweeping] = useState(false);
 
   // Review modal state
   const [activeReview, setActiveReview] = useState<ReviewItem | null>(null);
@@ -138,7 +135,7 @@ export function App() {
         }),
       });
       if (res.ok) {
-        setActionMessage(`Offer ${activeReview.brand} ${activeReview.model} approved and published to buyer!`);
+        setActionMessage(`Offer approved.`);
         setActiveReview(null);
         fetchDashboardData();
       }
@@ -154,11 +151,11 @@ export function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          reason: 'Insufficient proof of battery health / unclear specs in photos',
+          reason: 'Insufficient details or unclear condition',
         }),
       });
       if (res.ok) {
-        setActionMessage('Offer rejected and seller requested for clarification.');
+        setActionMessage('Offer declined.');
         setActiveReview(null);
         fetchDashboardData();
       }
@@ -187,29 +184,11 @@ export function App() {
         setNewSellerContact('');
         setNewSellerPhone('');
         setNewSellerTelegram('');
-        setActionMessage('New verified vendor added successfully!');
+        setActionMessage('Vendor added.');
         fetchDashboardData();
       }
     } catch (e) {
       console.error(e);
-    }
-  };
-
-  const handleDebouncerSweep = async () => {
-    setIsSweeping(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/debouncer/sweep`, {
-        method: 'POST',
-      });
-      if (res.ok) {
-        const d = await res.json();
-        setActionMessage(`Debouncer sweep finished: processed ${d.processedCount} batches.`);
-        fetchDashboardData();
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsSweeping(false);
     }
   };
 
@@ -226,9 +205,9 @@ export function App() {
   return (
     <div className="min-h-screen bg-[#f5f4ef] flex font-sans text-[#10393b] selection:bg-[#10393b] selection:text-white">
       {/* Sidebar - CLEAN, MINIMALIST, ZERO BORDERS, ZERO SHADOWS */}
-      <aside className="w-60 bg-white flex flex-col justify-between hidden md:flex shrink-0">
+      <aside className="w-56 bg-white flex flex-col justify-between hidden md:flex shrink-0">
         <div>
-          {/* Top Brand Bar - Clean without contrasting background block */}
+          {/* Top Brand Bar */}
           <div className="h-16 px-5 flex items-center gap-3">
             <img
               src="/handular_icon.png"
@@ -236,11 +215,11 @@ export function App() {
               className="w-8 h-8 max-w-[32px] rounded-[6px] object-contain"
             />
             <span className="text-sm font-medium tracking-tight text-[#10393b]">
-              Handular Ops
+              Handular
             </span>
           </div>
 
-          {/* Navigation Links - ZERO BORDERS, ZERO SHADOWS, 6PX SQUIRCLE */}
+          {/* Navigation Links */}
           <nav className="px-3 pt-2 space-y-1">
             <button
               onClick={() => setCurrentTab('dashboard')}
@@ -252,7 +231,7 @@ export function App() {
             >
               <div className="flex items-center gap-2.5">
                 <Squares2X2Icon className="w-4 h-4" />
-                <span>Command Center</span>
+                <span>Dashboard</span>
               </div>
               {currentTab === 'dashboard' && (
                 <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
@@ -269,7 +248,7 @@ export function App() {
             >
               <div className="flex items-center gap-2.5">
                 <ClipboardDocumentCheckIcon className="w-4 h-4" />
-                <span>Review Queue</span>
+                <span>Reviews</span>
               </div>
               <div className="flex items-center gap-1.5">
                 {reviews.length > 0 && (
@@ -293,7 +272,7 @@ export function App() {
             >
               <div className="flex items-center gap-2.5">
                 <ListBulletIcon className="w-4 h-4" />
-                <span>Sourcing Board</span>
+                <span>Requests</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-[11px] font-mono text-[#888888]">
@@ -315,7 +294,7 @@ export function App() {
             >
               <div className="flex items-center gap-2.5">
                 <UserGroupIcon className="w-4 h-4" />
-                <span>Verified Vendors</span>
+                <span>Vendors</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-[11px] font-mono text-[#888888]">
@@ -337,7 +316,7 @@ export function App() {
             >
               <div className="flex items-center gap-2.5">
                 <BanknotesIcon className="w-4 h-4" />
-                <span>Settlement & Escrow</span>
+                <span>Deals</span>
               </div>
               {currentTab === 'deals' && (
                 <span className="w-1.5 h-1.5 rounded-full bg-[#10393b] shrink-0" />
@@ -349,7 +328,7 @@ export function App() {
         {/* Clean Sidebar Footer */}
         <div className="p-4 text-[11px] text-[#888888]">
           <div className="flex items-center justify-between">
-            <span className="truncate max-w-[130px] font-normal text-[#666666]">
+            <span className="truncate max-w-[120px] font-normal text-[#666666]">
               {adminUser.email}
             </span>
             <button
@@ -366,17 +345,16 @@ export function App() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Header - CLEAN, NO SUBHEADING, ZERO BORDERS, ZERO SHADOWS */}
+        {/* Top Header - CLEAN, ZERO BORDERS, ZERO SHADOWS */}
         <header className="h-16 bg-white/95 backdrop-blur-md px-4 sm:px-8 flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-3">
-            {/* Mobile Brand Logo */}
             <img
               src="/handular_icon.png"
               alt="Handular"
               className="w-8 h-8 rounded-[4px] object-contain md:hidden"
             />
             <span className="text-base sm:text-lg font-normal text-[#10393b] capitalize">
-              {currentTab === 'dashboard' ? 'Command Center' : currentTab}
+              {currentTab === 'dashboard' ? 'Dashboard' : currentTab}
             </span>
           </div>
 
@@ -384,21 +362,9 @@ export function App() {
             <Button
               variant="secondary"
               size="sm"
-              onClick={handleDebouncerSweep}
-              disabled={isSweeping}
-              title="Run debouncer sweeper on message batches"
-              className="text-xs"
-            >
-              <ArrowPathIcon className={`w-3.5 h-3.5 mr-1 ${isSweeping ? 'animate-spin-smooth' : ''}`} />
-              <span className="hidden sm:inline">{isSweeping ? 'Sweeping...' : 'Sweep Batches'}</span>
-            </Button>
-
-            <Button
-              variant="secondary"
-              size="sm"
               onClick={fetchDashboardData}
               disabled={isRefreshing}
-              title="Refresh all admin data"
+              title="Refresh data"
               className="text-xs"
             >
               <ArrowPathIcon className={`w-3.5 h-3.5 mr-1 ${isRefreshing ? 'animate-spin-smooth' : ''}`} />
@@ -415,7 +381,6 @@ export function App() {
               <span>New Vendor</span>
             </Button>
 
-            {/* Mobile Exit Button */}
             <button
               onClick={handleSignOut}
               className="md:hidden p-2 rounded-[4px] text-[#888888] hover:text-red-600 transition-colors"
@@ -426,7 +391,7 @@ export function App() {
           </div>
         </header>
 
-        {/* Global Feedback Banner */}
+        {/* Feedback Banner */}
         {actionMessage && (
           <div className="bg-[#10393b] text-white px-6 py-2.5 text-xs flex items-center justify-between animate-chat-morph">
             <span className="font-normal">{actionMessage}</span>
@@ -439,12 +404,12 @@ export function App() {
           </div>
         )}
 
-        {/* Tab Pages Container - NO SCROLLBAR, MORPHING TRANSITIONS */}
+        {/* Tab Pages Container */}
         <main className="flex-1 p-4 sm:p-8 overflow-y-auto no-scrollbar max-w-7xl w-full mx-auto pb-24 md:pb-8">
-          {/* TAB 1: COMMAND CENTER / DASHBOARD */}
+          {/* TAB 1: DASHBOARD */}
           {currentTab === 'dashboard' && (
             <div key="dashboard" className="space-y-6 animate-chat-morph">
-              {/* KPI Cards - ZERO BORDERS, ZERO SHADOWS, 10PX CURVE */}
+              {/* KPI Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-white rounded-[10px] p-5">
                   <span className="block text-xs font-normal text-[#888888] uppercase tracking-wider mb-1">
@@ -457,23 +422,16 @@ export function App() {
 
                 <div className="bg-white rounded-[10px] p-5">
                   <span className="block text-xs font-normal text-[#888888] uppercase tracking-wider mb-1">
-                    Pending AI Reviews
+                    Pending Reviews
                   </span>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-normal text-[#ffad24] font-mono">
-                      {reviews.length}
-                    </span>
-                    {reviews.length > 0 && (
-                      <span className="text-xs text-[#ffad24] bg-[#ffad24]/10 px-1.5 py-0.5 rounded-[3px] font-normal">
-                        Action Required
-                      </span>
-                    )}
-                  </div>
+                  <span className="text-3xl font-normal text-[#ffad24] font-mono">
+                    {reviews.length}
+                  </span>
                 </div>
 
                 <div className="bg-white rounded-[10px] p-5">
                   <span className="block text-xs font-normal text-[#888888] uppercase tracking-wider mb-1">
-                    Verified Vendors
+                    Vendors
                   </span>
                   <span className="text-3xl font-normal text-[#10393b] font-mono">
                     {sellers.length}
@@ -482,7 +440,7 @@ export function App() {
 
                 <div className="bg-white rounded-[10px] p-5">
                   <span className="block text-xs font-normal text-[#888888] uppercase tracking-wider mb-1">
-                    Sourced Volume
+                    Total Volume
                   </span>
                   <span className="text-3xl font-normal text-emerald-600 font-mono">
                     ₦{metrics ? Number(metrics.totalVolume).toLocaleString() : '0'}
@@ -494,13 +452,13 @@ export function App() {
               <div className="bg-white rounded-[10px] p-6">
                 <div className="flex items-center justify-between mb-5">
                   <h3 className="text-sm font-normal text-[#10393b]">
-                    Recent Buyer Requests
+                    Recent Requests
                   </h3>
                   <button
                     onClick={() => setCurrentTab('requests')}
                     className="text-xs text-[#10393b] hover:text-[#154b4d] font-normal flex items-center gap-1 cursor-pointer"
                   >
-                    <span>View all board</span>
+                    <span>View all</span>
                     <ChevronRightIcon className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -521,7 +479,6 @@ export function App() {
                         key={req.id}
                         className="p-4 rounded-[6px] bg-[#eceae2] hover:bg-[#e4e1d7] transition-all"
                       >
-                        {/* Responsive 2-Row Clean Layout */}
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="w-9 h-9 rounded-[6px] bg-white flex items-center justify-center text-sm font-normal text-[#10393b] shrink-0">
@@ -538,10 +495,10 @@ export function App() {
                                 <span className="text-[10px] px-2 py-0.5 rounded-[3px] bg-white text-[#555555] font-normal">
                                   Max ₦{Number(req.maxBudget).toLocaleString()}
                                 </span>
+                                <span className="text-[10px] px-2 py-0.5 rounded-[3px] bg-white text-[#10393b] font-normal">
+                                  {req.status}
+                                </span>
                               </div>
-                              <span className="text-xs text-[#666666] block mt-0.5 font-normal truncate">
-                                Broadcasted to {req.sellersBroadcasted} vendors • Status: {req.status}
-                              </span>
                             </div>
                           </div>
 
@@ -552,7 +509,7 @@ export function App() {
                               rel="noopener noreferrer"
                               className="h-8 px-3 rounded-[5px] bg-white hover:bg-[#FAF9F6] text-xs text-[#10393b] font-normal flex items-center gap-1.5 transition-all"
                             >
-                              <span>Buyer View</span>
+                              <span>View</span>
                               <ChevronRightIcon className="w-3.5 h-3.5 text-[#777777]" />
                             </a>
                           </div>
@@ -565,12 +522,12 @@ export function App() {
             </div>
           )}
 
-          {/* TAB 2: STAFF REVIEW QUEUE */}
+          {/* TAB 2: REVIEWS */}
           {currentTab === 'reviews' && (
             <div key="reviews" className="space-y-6 animate-chat-morph">
               <div className="bg-white rounded-[10px] p-6">
                 <h2 className="text-xl sm:text-2xl font-normal text-[#10393b]">
-                  Multimodal AI Offer Verification Queue
+                  Review Offers
                 </h2>
               </div>
 
@@ -578,7 +535,7 @@ export function App() {
                 <div className="bg-white rounded-[10px] p-12 text-center">
                   <CheckCircleIcon className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
                   <h3 className="text-base font-normal text-[#10393b]">
-                    Queue is All Clear!
+                    No pending reviews
                   </h3>
                 </div>
               ) : (
@@ -594,24 +551,19 @@ export function App() {
                             {rev.requestToken}
                           </span>
                           <span className="text-xs text-[#555555] font-normal">
-                            Seller: {rev.sellerName} ({rev.sellerPhone})
+                            {rev.sellerName} ({rev.sellerPhone})
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-mono text-[#777777]">
-                            AI Confidence: {(rev.aiConfidenceScore * 100).toFixed(0)}%
-                          </span>
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={() => handleOpenReview(rev)}
-                            className="text-xs"
-                          >
-                            <span>Inspect & Verify</span>
-                            <ChevronRightIcon className="w-3.5 h-3.5 ml-1" />
-                          </Button>
-                        </div>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleOpenReview(rev)}
+                          className="text-xs"
+                        >
+                          <span>Review</span>
+                          <ChevronRightIcon className="w-3.5 h-3.5 ml-1" />
+                        </Button>
                       </div>
 
                       <div className="flex items-start gap-4">
@@ -628,9 +580,11 @@ export function App() {
                           <h4 className="text-sm font-normal text-[#10393b]">
                             {rev.brand} {rev.model} — ₦{Number(rev.price).toLocaleString()}
                           </h4>
-                          <p className="text-xs text-[#ffad24] bg-[#ffad24]/10 px-2 py-0.5 rounded-[3px] inline-block mt-1 font-normal">
-                            Flag Reason: {rev.flagReason}
-                          </p>
+                          {rev.flagReason && (
+                            <p className="text-xs text-[#ffad24] bg-[#ffad24]/10 px-2 py-0.5 rounded-[3px] inline-block mt-1 font-normal">
+                              {rev.flagReason}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -640,12 +594,12 @@ export function App() {
             </div>
           )}
 
-          {/* TAB 3: REQUESTS BOARD */}
+          {/* TAB 3: REQUESTS */}
           {currentTab === 'requests' && (
             <div key="requests" className="bg-white rounded-[10px] p-6 space-y-5 animate-chat-morph">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl sm:text-2xl font-normal text-[#10393b]">
-                  Active Buyer Requests Board
+                  Requests
                 </h3>
                 <Button
                   variant="secondary"
@@ -675,10 +629,8 @@ export function App() {
                       key={r.id}
                       className="p-4 rounded-[6px] bg-[#eceae2] hover:bg-[#e4e1d7] transition-all"
                     >
-                      {/* Responsive 2-Row Card Structure */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="space-y-1.5 min-w-0 flex-1">
-                          {/* Row 1: Token, Buyer, Phone, Status Badge */}
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-mono text-xs font-normal text-[#10393b]">
                               {r.publicToken}
@@ -695,17 +647,13 @@ export function App() {
                             </span>
                           </div>
 
-                          {/* Row 2: Category, Budget, Vendors */}
                           <div className="flex items-center gap-3 text-xs text-[#666666] font-normal">
                             <span>{r.category}</span>
                             <span>•</span>
                             <span>Max ₦{Number(r.maxBudget).toLocaleString()}</span>
-                            <span>•</span>
-                            <span>{r.sellersBroadcasted} vendors contacted</span>
                           </div>
                         </div>
 
-                        {/* Action Link */}
                         <div className="flex items-center justify-end shrink-0">
                           <a
                             href={`http://localhost:5180/?token=${r.publicToken}&view=offers`}
@@ -713,7 +661,7 @@ export function App() {
                             rel="noopener noreferrer"
                             className="h-8 px-3 rounded-[5px] bg-white hover:bg-[#FAF9F6] text-xs font-normal text-[#10393b] flex items-center justify-center gap-1.5 transition-all"
                           >
-                            <span>Buyer View</span>
+                            <span>View</span>
                             <ChevronRightIcon className="w-3.5 h-3.5 text-[#777777]" />
                           </a>
                         </div>
@@ -725,12 +673,12 @@ export function App() {
             </div>
           )}
 
-          {/* TAB 4: VERIFIED SELLERS */}
+          {/* TAB 4: VENDORS */}
           {currentTab === 'sellers' && (
             <div key="sellers" className="space-y-6 animate-chat-morph">
               <div className="bg-white rounded-[10px] p-6 flex items-center justify-between">
                 <h2 className="text-xl sm:text-2xl font-normal text-[#10393b]">
-                  Verified Campus Sellers Directory
+                  Vendors
                 </h2>
                 <Button
                   variant="primary"
@@ -760,9 +708,9 @@ export function App() {
                       </div>
 
                       <div className="text-xs text-[#666666] space-y-1 mb-4 font-normal">
-                        <p>Contact: {s.contactName}</p>
+                        <p>{s.contactName}</p>
                         <p className="font-mono text-[#10393b]">{s.whatsappNumber}</p>
-                        <p>Completed Deals: {s.completedDeals}</p>
+                        <p>{s.completedDeals} deals</p>
                       </div>
                     </div>
 
@@ -777,7 +725,7 @@ export function App() {
                         className="text-xs text-emerald-700 hover:underline flex items-center gap-1 font-normal"
                       >
                         <DevicePhoneMobileIcon className="w-3.5 h-3.5" />
-                        <span>Chat WhatsApp</span>
+                        <span>WhatsApp</span>
                       </a>
                     </div>
                   </div>
@@ -786,19 +734,19 @@ export function App() {
             </div>
           )}
 
-          {/* TAB 5: DEALS & ESCROW */}
+          {/* TAB 5: DEALS */}
           {currentTab === 'deals' && (
             <div key="deals" className="bg-white rounded-[10px] p-6 sm:p-8 space-y-6 animate-chat-morph">
               <div>
                 <h2 className="text-xl sm:text-2xl font-normal text-[#10393b]">
-                  Deal Settlement & Commission Escrow
+                  Completed Deals
                 </h2>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="p-5 rounded-[8px] bg-[#eceae2]">
                   <span className="block text-xs font-normal text-[#777777] uppercase">
-                    Escrow Guaranteed Deals
+                    Deals Closed
                   </span>
                   <span className="text-2xl font-normal text-[#10393b] font-mono mt-1 block">
                     {metrics ? metrics.completedDealsCount : 1}
@@ -814,27 +762,19 @@ export function App() {
                 </div>
                 <div className="p-5 rounded-[8px] bg-[#eceae2]">
                   <span className="block text-xs font-normal text-[#777777] uppercase">
-                    Campus Hub Commission
+                    Commission
                   </span>
                   <span className="text-2xl font-normal text-[#10393b] font-mono mt-1 block">
                     ₦{metrics ? Number(metrics.totalCommissions).toLocaleString() : '31,000'}
                   </span>
                 </div>
               </div>
-
-              <div className="p-4 rounded-[8px] bg-[#eceae2] text-xs text-[#444444] flex items-center justify-between font-normal">
-                <div className="flex items-center gap-2">
-                  <ShieldCheckIcon className="w-4 h-4 text-emerald-600" />
-                  <span>Campus Tech Lounge Escrow verification active at Room 104.</span>
-                </div>
-                <span className="font-mono text-emerald-700 font-normal">100% Guaranteed</span>
-              </div>
             </div>
           )}
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation - ZERO BORDERS, ZERO SHADOWS, TRANSLUCENT SQUIRCLE */}
+      {/* Mobile Bottom Navigation */}
       <nav className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md h-16 flex items-center justify-around z-30 md:hidden px-2">
         <button
           onClick={() => setCurrentTab('dashboard')}
@@ -901,11 +841,11 @@ export function App() {
           }`}
         >
           <BanknotesIcon className="w-5 h-5" />
-          <span className="text-[10px]">Escrow</span>
+          <span className="text-[10px]">Deals</span>
         </button>
       </nav>
 
-      {/* INSPECT & APPROVE MODAL - ZERO BORDERS, ZERO SHADOWS, 10PX CURVE */}
+      {/* INSPECT & APPROVE MODAL */}
       {activeReview && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-[10px] w-full max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar p-6 sm:p-7 space-y-6 animate-chat-morph">
@@ -915,7 +855,7 @@ export function App() {
                   {activeReview.requestToken}
                 </span>
                 <h3 className="text-base font-normal text-[#10393b] mt-2">
-                  Human Verification: {activeReview.brand} {activeReview.model}
+                  Review Offer: {activeReview.brand} {activeReview.model}
                 </h3>
               </div>
               <button
@@ -926,14 +866,13 @@ export function App() {
               </button>
             </div>
 
-            {/* Side-by-Side: Raw WhatsApp vs AI */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="p-4 rounded-[6px] bg-[#eceae2] space-y-2">
                 <span className="block text-[11px] font-normal text-[#777777] uppercase tracking-wider">
-                  Raw WhatsApp Inbound
+                  Seller Message
                 </span>
-                <p className="text-xs text-[#333333] italic font-normal">
-                  &quot;{activeReview.rawMessages.join(' ') || 'Vendor sent device photos and specs directly.'}&quot;
+                <p className="text-xs text-[#333333] font-normal">
+                  {activeReview.rawMessages.join(' ') || 'Device specs provided.'}
                 </p>
                 {activeReview.audioTranscript && (
                   <p className="text-xs text-[#10393b] bg-[#30c5ce]/10 p-2.5 rounded-[6px] font-normal">
@@ -944,25 +883,21 @@ export function App() {
 
               <div className="p-4 rounded-[6px] bg-[#ffad24]/10 space-y-2">
                 <span className="block text-[11px] font-normal text-[#ffad24] uppercase tracking-wider">
-                  AI Flag & Confidence
+                  Notes
                 </span>
                 <p className="text-xs text-[#333333] font-normal">
-                  {activeReview.flagReason}
+                  {activeReview.flagReason || 'Requires manual confirmation'}
                 </p>
-                <span className="block text-xs font-mono text-[#777777]">
-                  Confidence Score: {(activeReview.aiConfidenceScore * 100).toFixed(0)}%
-                </span>
               </div>
             </div>
 
-            {/* Editable Fields */}
             <div className="space-y-4">
               <span className="block text-xs font-normal text-[#777777] uppercase tracking-wider">
-                Staff Override & Fine-Tuning
+                Price & Condition
               </span>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <span className="block text-xs text-[#555555] mb-1.5 font-normal">Agreed Price (₦)</span>
+                  <span className="block text-xs text-[#555555] mb-1.5 font-normal">Price (₦)</span>
                   <input
                     type="number"
                     value={editPrice}
@@ -971,7 +906,7 @@ export function App() {
                   />
                 </div>
                 <div>
-                  <span className="block text-xs text-[#555555] mb-1.5 font-normal">Condition Grade</span>
+                  <span className="block text-xs text-[#555555] mb-1.5 font-normal">Condition</span>
                   <input
                     type="text"
                     value={editGrade}
@@ -982,7 +917,6 @@ export function App() {
               </div>
             </div>
 
-            {/* Modal Actions */}
             <div className="flex items-center justify-end gap-3 pt-3">
               <Button
                 variant="ghost"
@@ -990,22 +924,21 @@ export function App() {
                 onClick={handleRejectReview}
                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
               >
-                Reject & Ask Seller
+                Decline
               </Button>
               <Button
                 variant="primary"
                 size="md"
                 onClick={handleApproveReview}
               >
-                <span>Approve & Publish</span>
-                <ArrowRightIcon className="w-3.5 h-3.5 ml-1" />
+                Approve
               </Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ADD VENDOR MODAL - ZERO BORDERS, ZERO SHADOWS, 10PX CURVE */}
+      {/* ADD VENDOR MODAL */}
       {showAddSellerModal && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <form
@@ -1013,7 +946,7 @@ export function App() {
             className="bg-white rounded-[10px] w-full max-w-md p-6 sm:p-7 space-y-4 animate-chat-morph"
           >
             <h3 className="text-base font-normal text-[#10393b]">
-              Add Verified Campus Vendor
+              Add Vendor
             </h3>
             <div>
               <span className="block text-xs font-normal text-[#555555] mb-1.5">Business Name</span>
@@ -1049,7 +982,7 @@ export function App() {
               />
             </div>
             <div>
-              <span className="block text-xs font-normal text-[#555555] mb-1.5">Telegram Handle or ID (Optional)</span>
+              <span className="block text-xs font-normal text-[#555555] mb-1.5">Telegram (Optional)</span>
               <input
                 type="text"
                 placeholder="e.g. @jerus_tech"
@@ -1059,7 +992,7 @@ export function App() {
               />
             </div>
             <div>
-              <span className="block text-xs font-normal text-[#555555] mb-1.5">Primary Category</span>
+              <span className="block text-xs font-normal text-[#555555] mb-1.5">Category</span>
               <select
                 value={newSellerCategory}
                 onChange={(e) => setNewSellerCategory(e.target.value as any)}

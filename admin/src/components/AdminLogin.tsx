@@ -79,7 +79,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
         <form onSubmit={handleSubmit} className="space-y-3.5">
           <div>
             <label className="block text-xs font-normal text-[#555555] mb-1">
-              Staff Email
+              Email
             </label>
             <div className="relative">
               <EnvelopeIcon className="w-4 h-4 text-[#888888] absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -129,19 +129,11 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
               {loading ? (
                 <ArrowPathIcon className="w-4 h-4 animate-spin-smooth text-white" />
               ) : (
-                'Sign In to Ops'
+                'Sign In'
               )}
             </Button>
           </div>
         </form>
-      </div>
-
-      <div className="mt-6 text-center text-xs text-[#888888] flex items-center gap-2 font-normal">
-        <span>Handular Internal Platform</span>
-        <span>•</span>
-        <span>Fastify Backend</span>
-        <span>•</span>
-        <span>Zero Shadows & Borders</span>
       </div>
     </div>
   );

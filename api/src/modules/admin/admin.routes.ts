@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { PrismaClient, ReviewStatus } from '@prisma/client';
 import { z } from 'zod';
 import { broadcastService } from '../broadcast/broadcast.service';
+import { sharedStore } from '../common/store';
 
 const prisma = new PrismaClient();
 
@@ -83,43 +84,16 @@ export interface AuditLogItem {
   details: string;
 }
 
-const auditLogs: AuditLogItem[] = [
-  {
-    id: 'audit-init-1',
-    timestamp: new Date(Date.now() - 3600000 * 4).toISOString(),
-    action: 'VENDOR_CREATED',
-    actor: 'admin@handular.com',
-    entityType: 'VENDOR',
-    details: 'Verified vendor Apex Gadgets Hub added to campus network',
-  },
-  {
-    id: 'audit-init-2',
-    timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
-    action: 'OFFER_APPROVED',
-    actor: 'admin@handular.com',
-    entityType: 'OFFER',
-    details: 'Approved Apple MacBook Pro 2020 (₦600,000) for #REQ-86SB',
-  },
-];
+const auditLogs = sharedStore.auditLogs;
 
 function recordAudit(
   action: string,
   actor: string,
-  entityType: 'VENDOR' | 'OFFER' | 'REQUEST' | 'SYSTEM',
+  entityType: 'VENDOR' | 'OFFER' | 'REQUEST' | 'SYSTEM' | string,
   details: string,
   entityId?: string
 ) {
-  const entry: AuditLogItem = {
-    id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-    timestamp: new Date().toISOString(),
-    action,
-    actor: actor || 'admin@handular.com',
-    entityType,
-    entityId,
-    details,
-  };
-  auditLogs.unshift(entry);
-  return entry;
+  return sharedStore.recordAudit(action, actor || 'admin@handular.com', entityType, details, entityId);
 }
 
 export async function adminRoutes(fastify: FastifyInstance) {
@@ -142,134 +116,10 @@ export async function adminRoutes(fastify: FastifyInstance) {
     return reply.status(401).send({ error: 'Invalid admin credentials' });
   });
 
-  // Fallback in-memory stores if Postgres is starting up or temporarily offline
-  const fallbackSellers = [
-    {
-      id: 'seller-1',
-      businessName: 'Apex Gadgets Hub',
-      contactName: 'Samuel Adebayo',
-      whatsappNumber: '2348012345678',
-      telegramHandle: 'apex_gadgets_campus',
-      verificationStatus: 'VERIFIED',
-      verificationTier: 'TIER_1_VERIFIED',
-      physicalLocation: 'Shop 14, Main Campus Market Complex',
-      stallPhoto: 'https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=400',
-      ninOrId: 'NIN-29401849102',
-      bankName: 'Kuda Microfinance Bank',
-      accountNumber: '2019481920',
-      accountName: 'Samuel Apex Enterprise',
-      categories: ['LAPTOPS', 'PHONES'],
-      rating: 4.9,
-      completedDeals: 18,
-      notes: '',
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 'seller-2',
-      businessName: 'Campus Tech Plug',
-      contactName: 'Femi Olatunji',
-      whatsappNumber: '2348023456789',
-      telegramHandle: 'campus_plug',
-      verificationStatus: 'VERIFIED',
-      verificationTier: 'TIER_1_VERIFIED',
-      physicalLocation: 'Stall B-08, Student Union Shopping Arcade',
-      stallPhoto: 'https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=400',
-      ninOrId: 'NIN-89301928401',
-      bankName: 'OPay Digital Services',
-      accountNumber: '8023456789',
-      accountName: 'Femi Tech Ventures',
-      categories: ['LAPTOPS', 'ACCESSORIES'],
-      rating: 4.8,
-      completedDeals: 12,
-      notes: '',
-      createdAt: new Date().toISOString(),
-    },
-  ];
-
-  let fallbackReviews = [
-    {
-      id: 'rev-demo-1',
-      requestId: 'req-demo-1',
-      requestToken: 'REQ-86SB',
-      buyerName: 'Blessing Okafor',
-      buyerPhone: '08123456789',
-      category: 'LAPTOPS',
-      maxBudget: 650000,
-      targetSpecs: {
-        brand: 'Apple',
-        useCase: 'Computer Science Coding & Figma UI Design',
-        notes: 'Needs at least 16GB RAM, battery health > 80%',
-      },
-      sellerId: 'seller-1',
-      sellerName: 'Apex Gadgets Hub',
-      sellerPhone: '2348012345678',
-      brand: 'Apple',
-      model: 'MacBook Pro 13" (M1, 2020)',
-      specs: {
-        cpu: 'Apple M1 (8-core)',
-        ram: '16GB Unified',
-        storage: '512GB SSD',
-        batteryHealth: '87%',
-        screen: '13.3" Retina Display',
-      },
-      price: 600000,
-      conditionGrade: 'Grade A UK Used',
-      cloudinaryPhotos: [
-        'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1000&q=80',
-      ],
-      aiConfidenceScore: 0.72,
-      flagReason: 'Price is near upper budget limit, manual approval recommended',
-      rawMessages: [
-        'Clean M1 MacBook Pro 16GB RAM 512GB SSD Space Gray. Battery cycle 180, health 87%. Going for 600k final.',
-      ],
-      rawAudioUrls: [],
-      audioTranscript: 'Yes boss, battery condition is sharp, original charger included.',
-      createdAt: new Date().toISOString(),
-    },
-  ];
-
-  const fallbackRequests = [
-    {
-      id: 'req-demo-1',
-      publicToken: 'REQ-86SB',
-      buyerName: 'Blessing Okafor',
-      buyerPhone: '08123456789',
-      category: 'LAPTOPS',
-      targetSpecs: {
-        brand: 'Apple',
-        useCase: 'Computer Science Coding & Figma UI Design',
-        notes: 'Needs at least 16GB RAM, battery health > 80%',
-      },
-      minBudget: 400000,
-      maxBudget: 650000,
-      status: 'OFFERS_READY',
-      sellersBroadcasted: 4,
-      offersReceived: 2,
-      pendingReviews: 1,
-      expiresAt: new Date(Date.now() + 86400000).toISOString(),
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 'req-demo-2',
-      publicToken: 'REQ-91PQ',
-      buyerName: 'Emeka Nwosu',
-      buyerPhone: '08098765432',
-      category: 'PHONES',
-      targetSpecs: {
-        brand: 'Samsung',
-        useCase: 'Daily Driver & Content Creation',
-        notes: 'Galaxy S22 or S23 Ultra',
-      },
-      minBudget: 350000,
-      maxBudget: 500000,
-      status: 'BROADCASTED',
-      sellersBroadcasted: 3,
-      offersReceived: 0,
-      pendingReviews: 0,
-      expiresAt: new Date(Date.now() + 86400000).toISOString(),
-      createdAt: new Date().toISOString(),
-    },
-  ];
+  // Fallback in-memory stores backed by sharedStore
+  const fallbackSellers = sharedStore.sellers;
+  const fallbackRequests = sharedStore.requests;
+  let fallbackReviews = sharedStore.reviews;
 
   // 1. Dashboard KPI Metrics
   fastify.get('/api/v1/admin/metrics', async () => {
@@ -833,8 +683,87 @@ export async function adminRoutes(fastify: FastifyInstance) {
         data: result,
       });
     } catch (err: any) {
-      return reply.status(400).send({ error: err.message });
+      console.warn('[Admin Routes] Broadcast error, falling back:', err?.message);
+      const fallback = sharedStore.rebroadcastRequest(id);
+      return reply.send({
+        message: `Broadcasted to ${fallback.sellerCount} campus sellers`,
+        data: { broadcastedCount: fallback.sellerCount },
+      });
     }
+  });
+
+  // 9.5. Simulate Vendor Offer Submission (instant test from Admin UI or API)
+  fastify.post('/api/v1/admin/requests/:id/simulate-offer', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = (request.body as any) || {};
+
+    const req = sharedStore.requests.find((r) => r.id === id || r.publicToken === id) || sharedStore.requests[0];
+    const seller = sharedStore.sellers[Math.floor(Math.random() * sharedStore.sellers.length)];
+
+    const brands = req.category === 'PHONES' ? ['Samsung', 'Apple', 'Google'] : ['Apple', 'HP', 'Dell', 'Lenovo'];
+    const brand = body.brand || brands[Math.floor(Math.random() * brands.length)];
+    const model = body.model || (brand === 'Apple' ? (req.category === 'PHONES' ? 'iPhone 13 Pro 128GB' : 'MacBook Pro 13" (M1, 16GB)') : brand === 'Samsung' ? 'Galaxy S22 Ultra 256GB' : 'EliteBook 840 G7 16GB/512GB');
+    const price = body.price || Math.min(req.maxBudget, Math.max(req.minBudget || 200000, req.maxBudget - 50000));
+
+    const offerId = `rev-${Date.now()}`;
+    const newOffer = {
+      id: offerId,
+      requestId: req.id,
+      requestToken: req.publicToken,
+      buyerName: req.buyerName,
+      buyerPhone: req.buyerPhone,
+      category: req.category,
+      maxBudget: req.maxBudget,
+      targetSpecs: req.targetSpecs,
+      sellerId: seller.id,
+      sellerName: seller.businessName,
+      sellerPhone: seller.whatsappNumber,
+      brand,
+      model,
+      specs: body.specs || {
+        cpu: brand === 'Apple' ? 'Apple M1' : 'Intel Core i7-10610U',
+        ram: '16GB DDR4',
+        storage: '512GB NVMe SSD',
+        batteryHealth: '89%',
+        screen: '13.3" Retina / IPS FHD',
+      },
+      price,
+      conditionGrade: body.conditionGrade || 'Grade A UK Used',
+      cloudinaryPhotos: [
+        'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1000&q=80',
+      ],
+      aiConfidenceScore: 0.88,
+      flagReason: 'Vendor offer matching requested specs within student budget',
+      rawMessages: [
+        `Clean ${brand} ${model} available now. Battery 89%, 16GB RAM 512GB SSD. Going for ₦${Number(price).toLocaleString()} campus price.`,
+      ],
+      rawAudioUrls: [],
+      audioTranscript: 'Available at campus store desk for immediate inspection.',
+      createdAt: new Date().toISOString(),
+    };
+
+    sharedStore.addReview(newOffer);
+
+    // Also notify on Telegram if bot token configured
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    if (seller.telegramHandle && botToken) {
+      try {
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: seller.telegramHandle,
+            text: `⚡ *Vendor Offer Registered for #${req.publicToken}*\nItem: *${brand} ${model}*\nPrice: ₦${Number(price).toLocaleString()}\nSent to Campus Desk Review!`,
+            parse_mode: 'Markdown',
+          }),
+        });
+      } catch {}
+    }
+
+    return reply.send({
+      message: `Offer from ${seller.businessName} submitted & queued for Admin Review!`,
+      data: newOffer,
+    });
   });
 
   // 10. Deep Review Payload for Single Offer

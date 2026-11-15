@@ -1,5 +1,6 @@
 import { debouncerService } from '../debouncer/debouncer.service';
 import { PrismaClient } from '@prisma/client';
+import { sharedStore } from '../common/store';
 
 const prisma = new PrismaClient();
 
@@ -75,38 +76,41 @@ export class TelegramService {
     // Handle /start or /help greetings and automatically register/link the seller
     if (text === '/start' || text === '/help') {
       try {
-        let seller = await prisma.seller.findFirst({
-          where: {
-            OR: [
-              { telegramHandle: chatId },
-              ...(rawUsername ? [
-                { telegramHandle: rawUsername },
-                { telegramHandle: `@${rawUsername}` },
-              ] : []),
-              { whatsappNumber: `tg_${chatId}` },
-            ],
-          },
+        const contactName = [message.from?.first_name, message.from?.last_name].filter(Boolean).join(' ') || 'Campus Vendor';
+        let seller = sharedStore.getOrCreateSeller({
+          phone: `tg_${chatId}`,
+          telegramHandle: chatId,
+          contactName,
         });
 
-        const contactName = [message.from?.first_name, message.from?.last_name].filter(Boolean).join(' ') || 'Campus Vendor';
-
-        if (!seller) {
-          seller = await prisma.seller.create({
-            data: {
-              businessName: `${contactName}'s Tech Hub`,
-              contactName,
-              whatsappNumber: `tg_${chatId}`,
-              telegramHandle: chatId,
-              categories: ['LAPTOPS', 'PHONES', 'ACCESSORIES'],
-              verificationStatus: 'VERIFIED',
+        try {
+          let dbSeller = await prisma.seller.findFirst({
+            where: {
+              OR: [
+                { telegramHandle: chatId },
+                ...(rawUsername ? [
+                  { telegramHandle: rawUsername },
+                  { telegramHandle: `@${rawUsername}` },
+                ] : []),
+                { whatsappNumber: `tg_${chatId}` },
+              ],
             },
           });
-        } else if (seller.telegramHandle !== chatId) {
-          seller = await prisma.seller.update({
-            where: { id: seller.id },
-            data: { telegramHandle: chatId },
-          });
-        }
+
+          if (!dbSeller) {
+            await prisma.seller.create({
+              data: {
+                id: seller.id,
+                businessName: seller.businessName,
+                contactName,
+                whatsappNumber: `tg_${chatId}`,
+                telegramHandle: chatId,
+                categories: ['LAPTOPS', 'PHONES', 'ACCESSORIES'],
+                verificationStatus: 'VERIFIED',
+              },
+            });
+          }
+        } catch {}
 
         const welcome = `👋 *Welcome to Handular Campus Marketplace, ${seller.contactName}!* 🎓\n\n` +
           `🎉 *You are officially connected as a Verified Vendor* for:\n` +

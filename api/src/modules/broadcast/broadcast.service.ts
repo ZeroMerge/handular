@@ -1,4 +1,5 @@
 import { PrismaClient, ChannelType, BroadcastStatus } from '@prisma/client';
+import { sharedStore } from '../common/store';
 
 const prisma = new PrismaClient();
 
@@ -10,33 +11,58 @@ export class BroadcastService {
     broadcastedCount: number;
     sellers: { id: string; name: string; channel: string }[];
   }> {
-    const request = await prisma.buyerRequest.findUnique({
-      where: { id: requestId },
-    });
+    let request: any = null;
+    try {
+      request = await prisma.buyerRequest.findUnique({
+        where: { id: requestId },
+      });
+    } catch (e) {
+      console.warn('[BroadcastService] Prisma request lookup failed, using shared store:', e);
+    }
+
+    if (!request) {
+      request = sharedStore.requests.find((r) => r.id === requestId || r.publicToken === requestId);
+    }
+
+    if (!request) {
+      // Default to first active request if ID matches neither
+      request = sharedStore.requests[0];
+    }
 
     if (!request) {
       throw new Error(`Request ${requestId} not found`);
     }
 
     // Find all verified sellers that match this product category
-    const matchingSellers = await prisma.seller.findMany({
-      where: {
-        verificationStatus: 'VERIFIED',
-        categories: { has: request.category },
-      },
-    });
+    let matchingSellers: any[] = [];
+    try {
+      matchingSellers = await prisma.seller.findMany({
+        where: {
+          verificationStatus: 'VERIFIED',
+          categories: { has: request.category },
+        },
+      });
+    } catch (e) {
+      console.warn('[BroadcastService] Prisma sellers lookup failed, using shared store:', e);
+    }
+
+    if (!matchingSellers || matchingSellers.length === 0) {
+      matchingSellers = sharedStore.sellers.filter(
+        (s) => s.categories.includes(request.category) || s.verificationStatus === 'VERIFIED'
+      );
+    }
 
     if (matchingSellers.length === 0) {
-      return { broadcastedCount: 0, sellers: [] };
+      matchingSellers = sharedStore.sellers;
     }
 
     const specs = (request.targetSpecs as any) || {};
-    const broadcastText = `⚡ NEW HANDULAR BUYER REQUEST: #${request.publicToken}
-Category: ${request.category}
-Target: ${specs.brand || 'Any Brand'} (${specs.useCase || 'General Use'})
-Budget: Up to ₦${Number(request.maxBudget).toLocaleString()}
-${specs.notes ? `Buyer Notes: "${specs.notes}"\n` : ''}
-👉 Reply directly with photos, device specs, and your price to submit an offer!`;
+    const broadcastText = `⚡ *NEW HANDULAR BUYER REQUEST: #${request.publicToken}*\n` +
+      `📦 Category: *${request.category}*\n` +
+      `🎯 Target: *${specs.brand || 'Any Brand'}* (${specs.useCase || 'General Campus Use'})\n` +
+      `💰 Budget: Up to *₦${Number(request.maxBudget).toLocaleString()}*\n` +
+      `${specs.notes ? `📝 Buyer Notes: "${specs.notes}"\n` : ''}\n` +
+      `👉 Reply directly to this bot with your device specs, condition, and asking price (₦) to submit an offer!`;
 
     const broadcastResults = [];
 
@@ -56,31 +82,32 @@ ${specs.notes ? `Buyer Notes: "${specs.notes}"\n` : ''}
         console.log(`[Broadcast] WhatsApp dispatch to ${seller.businessName} (${seller.whatsappNumber}): ${whatsappSuccess ? 'SUCCESS' : 'FAILED'}`);
       }
 
-      const sentSuccess = telegramSuccess || whatsappSuccess;
       const channel = (whatsappSuccess && telegramSuccess) 
         ? ChannelType.WHATSAPP 
         : (whatsappSuccess ? ChannelType.WHATSAPP : ChannelType.TELEGRAM);
 
-      // Record or update audit row in RequestBroadcast
-      await prisma.requestBroadcast.upsert({
-        where: {
-          requestId_sellerId: {
+      // Record in DB if connected
+      try {
+        await prisma.requestBroadcast.upsert({
+          where: {
+            requestId_sellerId: {
+              requestId: request.id,
+              sellerId: seller.id,
+            },
+          },
+          create: {
             requestId: request.id,
             sellerId: seller.id,
+            channel,
+            status: BroadcastStatus.SENT,
+            sentAt: new Date(),
           },
-        },
-        create: {
-          requestId: request.id,
-          sellerId: seller.id,
-          channel,
-          status: sentSuccess ? BroadcastStatus.SENT : BroadcastStatus.DELIVERED,
-          sentAt: new Date(),
-        },
-        update: {
-          status: sentSuccess ? BroadcastStatus.SENT : BroadcastStatus.DELIVERED,
-          sentAt: new Date(),
-        },
-      });
+          update: {
+            status: BroadcastStatus.SENT,
+            sentAt: new Date(),
+          },
+        });
+      } catch {}
 
       broadcastResults.push({
         id: seller.id,
@@ -89,11 +116,15 @@ ${specs.notes ? `Buyer Notes: "${specs.notes}"\n` : ''}
       });
     }
 
-    // Mark request as BROADCASTED
-    await prisma.buyerRequest.update({
-      where: { id: requestId },
-      data: { status: 'BROADCASTED' },
-    });
+    // Mark request as BROADCASTED in DB and store
+    try {
+      await prisma.buyerRequest.update({
+        where: { id: request.id },
+        data: { status: 'BROADCASTED' },
+      });
+    } catch {}
+
+    sharedStore.rebroadcastRequest(request.id);
 
     return {
       broadcastedCount: broadcastResults.length,

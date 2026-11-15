@@ -373,6 +373,8 @@ export function App() {
     try {
       const res = await fetch(`${API_BASE_URL}/api/v1/admin/requests/${requestId}/broadcast`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       });
       const data = await res.json();
       if (res.ok && data.message) {
@@ -381,6 +383,23 @@ export function App() {
       fetchDashboardData();
     } catch (e) {
       console.warn('Re-broadcast sync:', e);
+    }
+  };
+
+  const handleSimulateOffer = async (requestId: string) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/admin/requests/${requestId}/simulate-offer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (res.ok && data.message) {
+        setActionMessage(data.message);
+        fetchDashboardData();
+      }
+    } catch (e) {
+      console.warn('Simulate offer error:', e);
     }
   };
 
@@ -1625,15 +1644,26 @@ export function App() {
             </div>
 
             <div className="flex items-center justify-between pt-2 border-t border-[#eceae2]">
-              <button
-                type="button"
-                onClick={() => handleRebroadcast(selectedRequest.id)}
-                className="h-8 px-3 rounded-[5px] bg-[#eceae2] hover:bg-[#e4e1d7] text-xs font-normal text-[#10393b] flex items-center gap-1.5 transition-all cursor-pointer"
-                title="Send notification to matching vendors on WhatsApp/Telegram"
-              >
-                <ArrowPathIcon className="w-3.5 h-3.5" />
-                <span>Re-broadcast to Vendors</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleRebroadcast(selectedRequest.id)}
+                  className="h-8 px-3 rounded-[5px] bg-[#eceae2] hover:bg-[#e4e1d7] text-xs font-normal text-[#10393b] flex items-center gap-1.5 transition-all cursor-pointer"
+                  title="Send notification to matching vendors on WhatsApp/Telegram"
+                >
+                  <ArrowPathIcon className="w-3.5 h-3.5" />
+                  <span>Re-broadcast to Vendors</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSimulateOffer(selectedRequest.id)}
+                  className="h-8 px-3 rounded-[5px] bg-[#10393b] hover:bg-[#154b4d] text-xs font-normal text-white flex items-center gap-1.5 transition-all cursor-pointer"
+                  title="Simulate incoming offer from a vendor"
+                >
+                  <PlusIcon className="w-3.5 h-3.5" />
+                  <span>Test Vendor Offer</span>
+                </button>
+              </div>
 
               <Button
                 variant="secondary"

@@ -69,3 +69,22 @@ button, input, select, textarea {
 .animate-spin-smooth {
   animation: spin-continuous 0.65s linear infinite;
 }
+
+/* Smooth fade blur transition for seamless switching between chats and views */
+@keyframes smoothFadeBlur {
+  0% {
+    opacity: 0;
+    filter: blur(4px);
+    transform: scale(0.996);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: scale(1);
+  }
+}
+
+.animate-fade-blur {
+  animation: smoothFadeBlur 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: opacity, filter, transform;
+}

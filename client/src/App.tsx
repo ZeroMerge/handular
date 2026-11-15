@@ -323,30 +323,33 @@ export function App() {
 
       <main className={`flex-1 ${view === 'wizard' ? 'overflow-hidden' : 'pb-24 md:pb-16'}`}>
         {view === 'wizard' && (
-          <RequestWizard
-            key={activeChatId || 'new-request'}
-            apiBaseUrl={API_BASE_URL}
-            onRequestSubmitted={handleRequestSubmitted}
-            currentUser={currentUser}
-            activeChatId={activeChatId}
-            onChatSessionCreated={(id) => {
-              setActiveChatId(id);
-              try {
-                localStorage.setItem('handular_active_chat', id);
-              } catch {}
-              fetchChats();
-            }}
-          />
+          <div key={activeChatId || 'new-request'} className="h-full animate-fade-blur">
+            <RequestWizard
+              apiBaseUrl={API_BASE_URL}
+              onRequestSubmitted={handleRequestSubmitted}
+              currentUser={currentUser}
+              activeChatId={activeChatId}
+              onChatSessionCreated={(id) => {
+                setActiveChatId(id);
+                try {
+                  localStorage.setItem('handular_active_chat', id);
+                } catch {}
+                fetchChats();
+              }}
+            />
+          </div>
         )}
 
         {(view === 'orders' || view === 'offers') && (
-          <OrdersView
-            apiBaseUrl={API_BASE_URL}
-            token={authToken}
-            user={currentUser}
-            onSelectRequest={handleSelectRequestFromOrders}
-            onCreateNewRequest={handleNewChat}
-          />
+          <div key="orders-view" className="animate-fade-blur">
+            <OrdersView
+              apiBaseUrl={API_BASE_URL}
+              token={authToken}
+              user={currentUser}
+              onSelectRequest={handleSelectRequestFromOrders}
+              onCreateNewRequest={handleNewChat}
+            />
+          </div>
         )}
 
         {/* Notion-style Side Peek Drawer for Offers */}
@@ -361,15 +364,17 @@ export function App() {
         )}
 
         {view === 'profile' && (
-          <ProfileView
-            user={currentUser}
-            token={authToken}
-            apiBaseUrl={API_BASE_URL}
-            onUpdateUser={handleUpdateUser}
-            onSignOut={handleSignOut}
-            onGoToRequests={() => handleSelectTab('wizard')}
-            onGoToOrders={() => handleSelectTab('orders')}
-          />
+          <div key="profile-view" className="animate-fade-blur">
+            <ProfileView
+              user={currentUser}
+              token={authToken}
+              apiBaseUrl={API_BASE_URL}
+              onUpdateUser={handleUpdateUser}
+              onSignOut={handleSignOut}
+              onGoToRequests={() => handleSelectTab('wizard')}
+              onGoToOrders={() => handleSelectTab('orders')}
+            />
+          </div>
         )}
 
         {view === 'confirmed' && currentToken && (

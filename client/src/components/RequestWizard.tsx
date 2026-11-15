@@ -126,6 +126,7 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
   const [submittedToken, setSubmittedToken] = useState<string | null>(null);
   const [offers, setOffers] = useState<OfferData[]>([]);
   const [isRefreshingOffers, setIsRefreshingOffers] = useState(false);
+  const [isLoadingChat, setIsLoadingChat] = useState<boolean>(Boolean(activeChatId));
 
   const getFormatTime = () => {
     const now = new Date();
@@ -219,6 +220,7 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
     let isCancelled = false;
 
     if (activeChatId) {
+      setIsLoadingChat(true);
       // Fetch existing session from API
       fetch(`${apiBaseUrl}/api/v1/chats/${activeChatId}`, {
         headers: {
@@ -249,11 +251,18 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
             }
           }
         })
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => {
+          if (!isCancelled) {
+            setIsLoadingChat(false);
+          }
+        });
       return () => {
         isCancelled = true;
       };
     }
+
+    setIsLoadingChat(false);
 
     // No activeChatId: check if there is an unauthenticated local draft
     try {
@@ -667,8 +676,22 @@ export const RequestWizard: React.FC<RequestWizardProps> = ({
     }
   };
 
+  // Smooth fade-blur loading placeholder when switching chats
+  if (isLoadingChat) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-2.5 sm:py-4 flex flex-col h-[calc(100dvh-8rem)] md:h-[calc(100dvh-4rem)] items-center justify-center animate-fade-blur">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-[#10393b]/20 border-t-[#10393b] animate-spin" />
+          <p className="text-xs text-[#777777] font-normal tracking-wide animate-pulse">
+            Loading conversation...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-2.5 sm:py-4 flex flex-col h-[calc(100dvh-8rem)] md:h-[calc(100dvh-4rem)]">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-2.5 sm:py-4 flex flex-col h-[calc(100dvh-8rem)] md:h-[calc(100dvh-4rem)] animate-fade-blur">
       {/* Conversation Thread - Pure Clean Chat Flow (NO Banners, NO Start Over) */}
       <div
         ref={chatContainerRef}
